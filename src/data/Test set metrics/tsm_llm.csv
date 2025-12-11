@@ -1,0 +1,5 @@
+"llm","total_expected","compiled","csr_percentage","runtime_success","rsr_percentage","semantically_valid","svr_percentage"
+"Llama3.3:70b",4401,"4234","96.21","3955","93.41","3955","100.00"
+"Qwen2.5-coder:14b",4401,"4184","95.07","4081","97.54","4081","100.00"
+"Qwen3:32b",4401,"3391","77.05","3315","97.76","3248","97.98"
+"Qwen3:4b",4401,"2300","52.26","2180","94.78","1934","88.72"

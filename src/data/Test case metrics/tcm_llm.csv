@@ -1,0 +1,5 @@
+"llm","total_test_cases","functionally_correct_cases","fc_percentage","avg_line_coverage"
+"Llama3.3:70b","73582","37870","51.47","98.21"
+"Qwen2.5-coder:14b","67728","33827","49.95","98.67"
+"Qwen3:32b","64806","49600","76.54","98.74"
+"Qwen3:4b","41668","20306","48.73","98.91"
