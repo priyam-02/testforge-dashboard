@@ -1,19 +1,22 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { FilterPanel } from '@/components/filters/FilterPanel';
-import { MetricViewToggle } from '@/components/filters/MetricViewToggle';
-import { SummaryCards } from '@/components/analytics/SummaryCards';
-import { LLMComparisonChart } from '@/components/analytics/LLMComparisonChart';
-import { ComplexityTrendChart } from '@/components/analytics/ComplexityTrendChart';
-import { TestTypeChart } from '@/components/analytics/TestTypeChart';
-import { PromptStrategyChart } from '@/components/analytics/PromptStrategyChart';
-import { PerformanceHeatmap } from '@/components/analytics/PerformanceHeatmap';
-import { DegradationCards } from '@/components/analytics/DegradationCards';
-import { CoverageFCGapChart } from '@/components/analytics/CoverageFCGapChart';
-import { MetricsExplanation } from '@/components/info/MetricsExplanation';
-import { useFilters } from '@/hooks/useFilters';
-import { filterTestSetMetrics, filterTestCaseMetrics } from '@/lib/data/filter-data';
+import { useEffect, useState } from "react";
+import { FilterPanel } from "@/components/filters/FilterPanel";
+import { MetricViewToggle } from "@/components/filters/MetricViewToggle";
+import { SummaryCards } from "@/components/analytics/SummaryCards";
+import { LLMComparisonChart } from "@/components/analytics/LLMComparisonChart";
+import { ComplexityTrendChart } from "@/components/analytics/ComplexityTrendChart";
+import { TestTypeChart } from "@/components/analytics/TestTypeChart";
+import { PromptStrategyChart } from "@/components/analytics/PromptStrategyChart";
+import { PerformanceHeatmap } from "@/components/analytics/PerformanceHeatmap";
+import { DegradationCards } from "@/components/analytics/DegradationCards";
+import { CoverageFCGapChart } from "@/components/analytics/CoverageFCGapChart";
+import { MetricsExplanation } from "@/components/info/MetricsExplanation";
+import { useFilters } from "@/hooks/useFilters";
+import {
+  filterTestSetMetrics,
+  filterTestCaseMetrics,
+} from "@/lib/data/filter-data";
 import {
   combineMetricsByLLM,
   aggregateByComplexity,
@@ -21,8 +24,11 @@ import {
   aggregateByPrompt,
   transformToHeatmap,
   calculateDegradationMetrics,
-} from '@/lib/data/aggregate-metrics';
-import type { TestSetMetrics, TestCaseMetrics } from '@/types/metrics';
+} from "@/lib/data/aggregate-metrics";
+import type { TestSetMetrics, TestCaseMetrics } from "@/types/metrics";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { FileText, Database, ExternalLink } from "lucide-react";
 
 export default function Home() {
   const filters = useFilters();
@@ -56,7 +62,7 @@ export default function Home() {
         setRawTestSetData(testSetJson.data);
         setRawTestCaseData(testCaseJson.data);
       } catch (error) {
-        console.error('Error loading data:', error);
+        console.error("Error loading data:", error);
       } finally {
         setLoading(false);
       }
@@ -67,12 +73,18 @@ export default function Home() {
 
   // Filter data client-side when filters change (instant transitions!)
   // Add guards to prevent errors during initial render
-  const testSetData = (rawTestSetData && rawTestSetData.length > 0) ? filterTestSetMetrics(rawTestSetData, filters) : [];
-  const testCaseData = (rawTestCaseData && rawTestCaseData.length > 0) ? filterTestCaseMetrics(rawTestCaseData, filters) : [];
+  const testSetData =
+    rawTestSetData && rawTestSetData.length > 0
+      ? filterTestSetMetrics(rawTestSetData, filters)
+      : [];
+  const testCaseData =
+    rawTestCaseData && rawTestCaseData.length > 0
+      ? filterTestCaseMetrics(rawTestCaseData, filters)
+      : [];
 
   // Calculate aggregated data for analytics view based on metric view
   // For test-set view, use empty test case data; for test-case view, use empty test set data
-  const isTestSetView = filters.metricView === 'test-set';
+  const isTestSetView = filters.metricView === "test-set";
   const llmComparison = isTestSetView
     ? combineMetricsByLLM(testSetData, [])
     : combineMetricsByLLM([], testCaseData);
@@ -99,12 +111,97 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <div className="text-center pt-8 pb-4 px-8">
-        <h1 className="text-4xl font-bold mb-2">TestForge Benchmark Dashboard</h1>
-        <p className="text-muted-foreground">
-          Interactive visualization of test generation metrics across LLMs, strategies, and configurations
-        </p>
+      {/* Header Section - Static */}
+      <div className="max-w-7xl mx-auto p-8">
+        <Card className="p-6">
+          <div className="text-start">
+            <h1 className="text-4xl font-bold mb-4 text-foreground">
+              TestForge: Benchmarking LLM-Based Test Case Generation
+            </h1>
+
+            {/* Action Buttons and Authors */}
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <Button variant="outline" size="default" className="gap-2">
+                <FileText className="w-4 h-4" />
+                Abstract
+              </Button>
+              <Button
+                variant="outline"
+                size="default"
+                className="gap-2"
+                asChild
+              >
+                <a
+                  href="https://figshare.com/s/a6b69b07e8fa134acb39?file=59094464"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Database className="w-4 h-4" />
+                  Raw Data
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </Button>
+              <div className="h-6 w-px bg-border" />
+              <div className="flex flex-wrap items-center gap-2 text-base">
+                <span className="text-muted-foreground font-medium">
+                  Authors:
+                </span>
+                <a
+                  href="https://mpvieira.github.io/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline font-medium inline-flex items-center gap-1"
+                >
+                  Marco Vieira
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+                <span className="text-muted-foreground">·</span>
+                <a
+                  href="https://www.linkedin.com/in/priyamshahh/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline font-medium inline-flex items-center gap-1"
+                >
+                  Priyam Shah
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+                <span className="text-muted-foreground">·</span>
+                <a
+                  href="https://www.linkedin.com/in/bhavainshah/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline font-medium inline-flex items-center gap-1"
+                >
+                  Bhavain Shah
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+                <span className="text-muted-foreground">·</span>
+                <a
+                  href="https://www.linkedin.com/in/vineetkhadloya/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline font-medium inline-flex items-center gap-1"
+                >
+                  Vineet Khadloya
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+
+            {/* Description */}
+            <p className="text-base leading-relaxed text-muted-foreground">
+              This dashboard presents an interactive exploration of{" "}
+              <strong className="text-foreground">TestForge</strong>, an
+              extensible framework for evaluating LLM performance in automated
+              test case generation. Leveraging the IBM CodeNet Project dataset,
+              we assess test quality through compilation success, runtime
+              reliability, and semantic validity. Use the filters below to
+              explore how different models, prompting strategies, test types
+              (Standard, Boundary, Mixed), and problem complexities impact
+              generation success for Java programs.
+            </p>
+          </div>
+        </Card>
       </div>
 
       {/* Sticky Filters Section */}
@@ -136,7 +233,7 @@ export default function Home() {
             <SummaryCards
               data={{
                 testSet: testSetData,
-                testCase: []
+                testCase: [],
               }}
             />
 
@@ -173,7 +270,7 @@ export default function Home() {
             <SummaryCards
               data={{
                 testSet: [],
-                testCase: testCaseData
+                testCase: testCaseData,
               }}
             />
 
@@ -208,7 +305,6 @@ export default function Home() {
             <PerformanceHeatmap data={heatmapData} />
           </div>
         )}
-
       </main>
     </div>
   );
