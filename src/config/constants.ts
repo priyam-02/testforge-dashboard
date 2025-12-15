@@ -8,33 +8,33 @@ export const SOURCE_LANGUAGES: ReadonlyArray<{ value: SourceLanguage; label: str
   // { value: 'JavaScript', label: 'JavaScript' },
 ] as const;
 
-// LLM Models Configuration
+// LLM Models Configuration (TestForge Design System)
 export const LLMS: ReadonlyArray<{ value: LLMType; label: string; color: string }> = [
-  { value: 'Llama3.3:70b', label: 'Llama 3.3 (70B)', color: '#3b82f6' },      // blue-500
-  { value: 'Qwen2.5-coder:14b', label: 'Qwen 2.5 Coder (14B)', color: '#8b5cf6' }, // violet-500
-  { value: 'Qwen3:4b', label: 'Qwen 3 (4B)', color: '#ec4899' },          // pink-500
-  { value: 'Qwen3:32b', label: 'Qwen 3 (32B)', color: '#10b981' },         // emerald-500
+  { value: 'Llama3.3:70b', label: 'Llama 3.3 (70B)', color: '#40A9FF' },      // model.llama
+  { value: 'Qwen2.5-coder:14b', label: 'Qwen 2.5 Coder (14B)', color: '#73D13D' }, // model.qwenCoder
+  { value: 'Qwen3:4b', label: 'Qwen 3 (4B)', color: '#FF85C0' },          // model.qwen4b
+  { value: 'Qwen3:32b', label: 'Qwen 3 (32B)', color: '#597EF7' },         // model.qwen32b
 ] as const;
 
-// Prompt Strategy Configuration (values match CSV format)
+// Prompt Strategy Configuration (TestForge Design System)
 export const PROMPT_STRATEGIES: ReadonlyArray<{ value: PromptType; label: string; color: string }> = [
-  { value: 'zero_shot', label: 'Zero-Shot', color: '#f59e0b' },         // amber-500
-  { value: 'few_shot', label: 'Few-Shot', color: '#6366f1' },          // indigo-500
-  { value: 'chain_of_thought', label: 'Chain-of-Thought', color: '#14b8a6' },  // teal-500
+  { value: 'zero_shot', label: 'Zero-Shot', color: '#FAAD14' },         // outcome.O2 (orange)
+  { value: 'few_shot', label: 'Few-Shot', color: '#597EF7' },          // model.qwen32b (indigo)
+  { value: 'chain_of_thought', label: 'Chain-of-Thought', color: '#36CFC9' },  // outcome.O4 (teal)
 ] as const;
 
-// Test Types Configuration (values match CSV format)
+// Test Types Configuration (TestForge Design System)
 export const TEST_TYPES: ReadonlyArray<{ value: TestType; label: string; color: string }> = [
-  { value: 'standard', label: 'Standard', color: '#06b6d4' },          // cyan-500
-  { value: 'boundary', label: 'Boundary', color: '#f97316' },          // orange-500
-  { value: 'mix', label: 'Mixed', color: '#a855f7' },             // purple-500
+  { value: 'standard', label: 'Standard', color: '#40A9FF' },          // model.llama (blue)
+  { value: 'boundary', label: 'Boundary', color: '#FAAD14' },          // outcome.O2 (orange)
+  { value: 'mix', label: 'Mixed', color: '#9254DE' },             // outcome.O3 (purple)
 ] as const;
 
-// Problem Complexity Configuration
+// Problem Complexity Configuration (TestForge Design System)
 export const COMPLEXITIES: ReadonlyArray<{ value: Complexity; label: string; color: string }> = [
-  { value: 'Easy', label: 'Easy', color: '#22c55e' },              // green-500
-  { value: 'Moderate', label: 'Moderate', color: '#eab308' },          // yellow-500
-  { value: 'Hard', label: 'Hard', color: '#ef4444' },              // red-500
+  { value: 'Easy', label: 'Easy', color: '#36CFC9' },              // outcome.O4 (teal)
+  { value: 'Moderate', label: 'Moderate', color: '#FAAD14' },          // outcome.O2 (orange)
+  { value: 'Hard', label: 'Hard', color: '#FF4D4F' },              // outcome.O1 (red)
 ] as const;
 
 // Metric Definitions
@@ -109,20 +109,20 @@ export function getComplexityColor(complexity: string): string {
   return config?.color || '#64748b';
 }
 
-// Performance Colors for Analytics Dashboard (Polyglot-style)
+// Performance Colors for Analytics Dashboard (TestForge Design System - Outcome Colors)
 export const PERFORMANCE_COLORS = {
-  CSR: '#ef4444',      // red-500 (worst - compilation failures)
-  RSR: '#f97316',      // orange-500 (runtime failures)
-  SVR: '#eab308',      // yellow-500 (semantic validity issues)
-  FC: '#22c55e',       // green-500 (best - functional correctness)
-  Coverage: '#3b82f6', // blue-500 (line coverage)
+  CSR: '#FF4D4F',      // outcome.O1 (fails to compile - red)
+  RSR: '#FAAD14',      // outcome.O2 (runtime failure - orange)
+  SVR: '#9254DE',      // outcome.O3 (semantically invalid - purple)
+  FC: '#36CFC9',       // outcome.O4 (valid suite - teal)
+  Coverage: '#73D13D', // model.qwenCoder (green - distinct from all others)
 } as const;
 
-// Heatmap Colors for Performance Matrix
+// Heatmap Colors for Performance Matrix (TestForge Design System)
 export const HEATMAP_COLORS = {
-  low: '#ef4444',      // red-500 (0-33%)
-  medium: '#eab308',   // yellow-500 (34-66%)
-  high: '#22c55e',     // green-500 (67-100%)
+  low: '#FF4D4F',      // outcome.O1 (0-33%)
+  medium: '#FAAD14',   // outcome.O2 (34-66%)
+  high: '#36CFC9',     // outcome.O4 (67-100%)
 } as const;
 
 // Helper function to get heatmap color based on percentage value

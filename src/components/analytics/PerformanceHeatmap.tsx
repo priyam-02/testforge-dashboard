@@ -1,15 +1,27 @@
-'use client';
+"use client";
 
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, Tooltip } from 'recharts';
-import { Card } from '@/components/ui/card';
-import type { HeatmapData } from '@/types/metrics';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Legend,
+  Tooltip,
+} from "recharts";
+import { Card } from "@/components/ui/card";
+import type { HeatmapData } from "@/types/metrics";
 
 interface PerformanceHeatmapProps {
   data: HeatmapData[];
   title?: string;
 }
 
-export function PerformanceHeatmap({ data, title = 'LLM × Test Type Performance' }: PerformanceHeatmapProps) {
+export function PerformanceHeatmap({
+  data,
+  title = "LLM × Test Type Performance",
+}: PerformanceHeatmapProps) {
   // Get unique LLMs and test types
   const llms = Array.from(new Set(data.map((d) => d.llm))).sort();
   const testTypes = Array.from(new Set(data.map((d) => d.test_type))).sort();
@@ -27,28 +39,30 @@ export function PerformanceHeatmap({ data, title = 'LLM × Test Type Performance
 
   // Transform data for grouped bar chart - each test type is a group
   const chartData = testTypes.map((testType) => {
-    const point: Record<string, string | number> = { testType: formatTestType(testType) };
+    const point: Record<string, string | number> = {
+      testType: formatTestType(testType),
+    };
     llms.forEach((llm) => {
       point[llm] = dataMap.get(`${llm}__${testType}`) || 0;
     });
     return point;
   });
 
-  // Gradient color palette for LLMs with unique styling
+  // LLM colors - vibrant, modern palette for performance heatmap
   const colors = [
-    '#6366f1', // indigo
-    '#14b8a6', // teal
-    '#f97316', // orange
-    '#a855f7', // purple
+    "#00D9FF", // Cyan (Llama - bright electric cyan)
+    "#FFB800", // Amber (Qwen2.5-coder - golden yellow)
+    "#FF3D71", // Coral Red (Qwen3:4b - vibrant coral)
+    "#7C3AED", // Vivid Purple (Qwen3:32b - rich violet)
   ];
 
   return (
-    <Card className="p-6 bg-gradient-to-br from-white via-slate-50 to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-slate-950 border-slate-200 dark:border-slate-800 shadow-lg">
-      <div className="mb-6">
-        <h3 className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
+    <Card className="p-6">
+      <div className="mb-8">
+        <h3 className="text-xl font-bold text-foreground">
           {title}
         </h3>
-        <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 font-medium">
+        <p className="text-sm text-muted-foreground mt-2 font-medium">
           Test pass rates (FC%) comparison across LLMs and test types
         </p>
       </div>
@@ -60,73 +74,61 @@ export function PerformanceHeatmap({ data, title = 'LLM × Test Type Performance
           barGap={10}
           barCategoryGap="25%"
         >
-          <defs>
-            {llms.map((llm, index) => (
-              <linearGradient key={`gradient-${llm}`} id={`gradient-${llm}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={colors[index % colors.length]} stopOpacity={0.95} />
-                <stop offset="100%" stopColor={colors[index % colors.length]} stopOpacity={0.7} />
-              </linearGradient>
-            ))}
-            {/* Shadow effect for bars */}
-            <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-              <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3"/>
-            </filter>
-          </defs>
+          <defs></defs>
           <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="#cbd5e1"
-            opacity={0.4}
+            strokeDasharray="5 5"
+            stroke="#475569"
+            opacity={0.6}
             vertical={false}
           />
           <XAxis
             dataKey="testType"
-            tick={{ fill: '#475569', fontSize: 13, fontWeight: 600 }}
+            tick={{ fill: "#A6AEC8", fontSize: 13, fontWeight: 600 }}
             angle={-35}
             textAnchor="end"
             height={90}
-            axisLine={{ stroke: '#94a3b8', strokeWidth: 2 }}
-            tickLine={{ stroke: '#94a3b8', strokeWidth: 1.5 }}
+            axisLine={{ stroke: "#222736", strokeWidth: 1 }}
+            tickLine={{ stroke: "#222736", strokeWidth: 1 }}
           />
           <YAxis
             label={{
-              value: 'FC% Rate',
+              value: "FC% Rate",
               angle: -90,
-              position: 'insideLeft',
-              style: { fill: '#475569', fontWeight: 700, fontSize: 14 }
+              position: "insideLeft",
+              style: { fill: "#A6AEC8", fontWeight: 600, fontSize: 13 },
             }}
             domain={[0, 100]}
-            tick={{ fill: '#475569', fontSize: 13, fontWeight: 500 }}
-            axisLine={{ stroke: '#94a3b8', strokeWidth: 2 }}
-            tickLine={{ stroke: '#94a3b8', strokeWidth: 1.5 }}
+            tick={{ fill: "#A6AEC8", fontSize: 13, fontWeight: 500 }}
+            axisLine={{ stroke: "#222736", strokeWidth: 1 }}
+            tickLine={{ stroke: "#222736", strokeWidth: 1 }}
             ticks={[0, 20, 40, 60, 80, 100]}
           />
           <Tooltip
             formatter={(value: number) => `${value.toFixed(2)}%`}
             labelFormatter={(label) => `Test Type: ${label}`}
             contentStyle={{
-              backgroundColor: 'rgba(15, 23, 42, 0.95)',
-              border: '1px solid rgba(148, 163, 184, 0.3)',
-              borderRadius: '12px',
-              padding: '14px 16px',
-              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+              backgroundColor: "#181D2B",
+              border: "1px solid #222736",
+              borderRadius: "8px",
+              padding: "12px",
             }}
             labelStyle={{
-              color: '#f1f5f9',
-              fontWeight: 700,
-              marginBottom: '8px',
-              fontSize: '14px',
+              color: "#F7F8FF",
+              fontWeight: 600,
+              marginBottom: "8px",
+              fontSize: "13px",
             }}
             itemStyle={{
-              color: '#e2e8f0',
-              fontSize: '13px',
+              color: "#A6AEC8",
+              fontSize: "12px",
               fontWeight: 500,
             }}
-            cursor={{ fill: 'rgba(148, 163, 184, 0.1)' }}
+            cursor={{ fill: "rgba(34, 39, 54, 0.3)" }}
           />
           <Legend
             wrapperStyle={{
-              paddingTop: '30px',
-              fontSize: '14px',
+              paddingTop: "30px",
+              fontSize: "14px",
               fontWeight: 600,
             }}
             iconType="circle"
@@ -136,14 +138,12 @@ export function PerformanceHeatmap({ data, title = 'LLM × Test Type Performance
             <Bar
               key={llm}
               dataKey={llm}
-              fill={`url(#gradient-${llm})`}
+              fill={colors[index % colors.length]}
               name={llm}
-              radius={[10, 10, 0, 0]}
-              animationDuration={700}
-              animationEasing="ease-out"
+              radius={[6, 6, 0, 0]}
+              animationDuration={250}
               stroke={colors[index % colors.length]}
-              strokeWidth={2}
-              filter="url(#shadow)"
+              strokeWidth={1}
             />
           ))}
         </BarChart>

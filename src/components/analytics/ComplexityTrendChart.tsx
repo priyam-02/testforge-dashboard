@@ -49,12 +49,12 @@ export function ComplexityTrendChart({
   });
 
   return (
-    <Card className="p-6 bg-gradient-to-br from-white via-violet-50/30 to-purple-50/20 dark:from-gray-950 dark:via-violet-950/20 dark:to-purple-950/10 border-violet-200/50 dark:border-violet-800/30 shadow-lg">
+    <Card className="p-6">
       <div className="mb-8">
-        <h3 className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
+        <h3 className="text-xl font-bold text-foreground">
           {title}
         </h3>
-        <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 font-medium">
+        <p className="text-sm text-muted-foreground mt-2 font-medium">
           Performance metrics across problem complexity levels
         </p>
       </div>
@@ -63,84 +63,53 @@ export function ComplexityTrendChart({
           data={chartData}
           margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
         >
-          <defs>
-            {/* Gradients for area fills under lines */}
-            <linearGradient id="csrLineGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={PERFORMANCE_COLORS.CSR} stopOpacity={0.3} />
-              <stop offset="100%" stopColor={PERFORMANCE_COLORS.CSR} stopOpacity={0} />
-            </linearGradient>
-            <linearGradient id="rsrLineGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={PERFORMANCE_COLORS.RSR} stopOpacity={0.3} />
-              <stop offset="100%" stopColor={PERFORMANCE_COLORS.RSR} stopOpacity={0} />
-            </linearGradient>
-            <linearGradient id="svrLineGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={PERFORMANCE_COLORS.SVR} stopOpacity={0.3} />
-              <stop offset="100%" stopColor={PERFORMANCE_COLORS.SVR} stopOpacity={0} />
-            </linearGradient>
-            <linearGradient id="fcLineGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={PERFORMANCE_COLORS.FC} stopOpacity={0.3} />
-              <stop offset="100%" stopColor={PERFORMANCE_COLORS.FC} stopOpacity={0} />
-            </linearGradient>
-            <linearGradient id="coverageLineGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={PERFORMANCE_COLORS.Coverage} stopOpacity={0.3} />
-              <stop offset="100%" stopColor={PERFORMANCE_COLORS.Coverage} stopOpacity={0} />
-            </linearGradient>
-            {/* Glow effect for dots */}
-            <filter id="glow-complexity" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
+          <defs></defs>
           <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="#cbd5e1"
-            opacity={0.4}
+            strokeDasharray="5 5"
+            stroke="#475569"
+            opacity={0.6}
             vertical={false}
           />
           <XAxis
             dataKey="name"
-            tick={{ fill: '#475569', fontSize: 13, fontWeight: 600 }}
-            axisLine={{ stroke: '#94a3b8', strokeWidth: 2 }}
-            tickLine={{ stroke: '#94a3b8', strokeWidth: 1.5 }}
+            tick={{ fill: '#A6AEC8', fontSize: 13, fontWeight: 600 }}
+            axisLine={{ stroke: '#222736', strokeWidth: 1 }}
+            tickLine={{ stroke: '#222736', strokeWidth: 1 }}
           />
           <YAxis
             label={{
               value: 'Rate (%)',
               angle: -90,
               position: 'insideLeft',
-              style: { fill: '#475569', fontWeight: 700, fontSize: 14 }
+              style: { fill: '#A6AEC8', fontWeight: 600, fontSize: 13 }
             }}
             domain={[0, 100]}
-            tick={{ fill: '#475569', fontSize: 13, fontWeight: 500 }}
-            axisLine={{ stroke: '#94a3b8', strokeWidth: 2 }}
-            tickLine={{ stroke: '#94a3b8', strokeWidth: 1.5 }}
+            tick={{ fill: '#A6AEC8', fontSize: 13, fontWeight: 500 }}
+            axisLine={{ stroke: '#222736', strokeWidth: 1 }}
+            tickLine={{ stroke: '#222736', strokeWidth: 1 }}
             ticks={[0, 20, 40, 60, 80, 100]}
           />
           <Tooltip
             formatter={(value: number) => `${value.toFixed(2)}%`}
             labelFormatter={(label) => `Complexity: ${label}`}
             contentStyle={{
-              backgroundColor: 'rgba(15, 23, 42, 0.95)',
-              border: '1px solid rgba(148, 163, 184, 0.3)',
-              borderRadius: '12px',
-              padding: '14px 16px',
-              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+              backgroundColor: '#181D2B',
+              border: '1px solid #222736',
+              borderRadius: '8px',
+              padding: '12px',
             }}
             labelStyle={{
-              color: '#f1f5f9',
-              fontWeight: 700,
+              color: '#F7F8FF',
+              fontWeight: 600,
               marginBottom: '8px',
-              fontSize: '14px',
+              fontSize: '13px',
             }}
             itemStyle={{
-              color: '#e2e8f0',
-              fontSize: '13px',
+              color: '#A6AEC8',
+              fontSize: '12px',
               fontWeight: 500,
             }}
-            cursor={{ fill: 'rgba(148, 163, 184, 0.1)', strokeDasharray: '5 5' }}
+            cursor={{ fill: 'rgba(34, 39, 54, 0.3)' }}
           />
           <Legend
             wrapperStyle={{
@@ -159,16 +128,14 @@ export function ComplexityTrendChart({
                 stroke={PERFORMANCE_COLORS.CSR}
                 strokeWidth={3}
                 dot={{
-                  r: 6,
+                  r: 5,
                   fill: PERFORMANCE_COLORS.CSR,
-                  strokeWidth: 3,
-                  stroke: '#fff',
-                  filter: 'url(#glow-complexity)'
+                  strokeWidth: 2,
+                  stroke: '#050711'
                 }}
-                activeDot={{ r: 8, strokeWidth: 3 }}
+                activeDot={{ r: 6, strokeWidth: 2 }}
                 name="CSR (%)"
-                animationDuration={800}
-                animationEasing="ease-in-out"
+                animationDuration={250}
               />
               <Line
                 type="monotone"
@@ -176,16 +143,14 @@ export function ComplexityTrendChart({
                 stroke={PERFORMANCE_COLORS.RSR}
                 strokeWidth={3}
                 dot={{
-                  r: 6,
+                  r: 5,
                   fill: PERFORMANCE_COLORS.RSR,
-                  strokeWidth: 3,
-                  stroke: '#fff',
-                  filter: 'url(#glow-complexity)'
+                  strokeWidth: 2,
+                  stroke: '#050711'
                 }}
-                activeDot={{ r: 8, strokeWidth: 3 }}
+                activeDot={{ r: 6, strokeWidth: 2 }}
                 name="RSR (%)"
-                animationDuration={800}
-                animationEasing="ease-in-out"
+                animationDuration={250}
               />
               <Line
                 type="monotone"
@@ -193,16 +158,14 @@ export function ComplexityTrendChart({
                 stroke={PERFORMANCE_COLORS.SVR}
                 strokeWidth={3}
                 dot={{
-                  r: 6,
+                  r: 5,
                   fill: PERFORMANCE_COLORS.SVR,
-                  strokeWidth: 3,
-                  stroke: '#fff',
-                  filter: 'url(#glow-complexity)'
+                  strokeWidth: 2,
+                  stroke: '#050711'
                 }}
-                activeDot={{ r: 8, strokeWidth: 3 }}
+                activeDot={{ r: 6, strokeWidth: 2 }}
                 name="SVR (%)"
-                animationDuration={800}
-                animationEasing="ease-in-out"
+                animationDuration={250}
               />
             </>
           ) : (
@@ -213,16 +176,14 @@ export function ComplexityTrendChart({
                 stroke={PERFORMANCE_COLORS.FC}
                 strokeWidth={3}
                 dot={{
-                  r: 6,
+                  r: 5,
                   fill: PERFORMANCE_COLORS.FC,
-                  strokeWidth: 3,
-                  stroke: '#fff',
-                  filter: 'url(#glow-complexity)'
+                  strokeWidth: 2,
+                  stroke: '#050711'
                 }}
-                activeDot={{ r: 8, strokeWidth: 3 }}
+                activeDot={{ r: 6, strokeWidth: 2 }}
                 name="FC%"
-                animationDuration={800}
-                animationEasing="ease-in-out"
+                animationDuration={250}
               />
               <Line
                 type="monotone"
@@ -230,16 +191,14 @@ export function ComplexityTrendChart({
                 stroke={PERFORMANCE_COLORS.Coverage}
                 strokeWidth={3}
                 dot={{
-                  r: 6,
+                  r: 5,
                   fill: PERFORMANCE_COLORS.Coverage,
-                  strokeWidth: 3,
-                  stroke: '#fff',
-                  filter: 'url(#glow-complexity)'
+                  strokeWidth: 2,
+                  stroke: '#050711'
                 }}
-                activeDot={{ r: 8, strokeWidth: 3 }}
+                activeDot={{ r: 6, strokeWidth: 2 }}
                 name="Coverage (%)"
-                animationDuration={800}
-                animationEasing="ease-in-out"
+                animationDuration={250}
               />
             </>
           )}

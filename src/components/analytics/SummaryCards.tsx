@@ -38,19 +38,19 @@ export function SummaryCards({ data }: SummaryCardsProps) {
       label: 'CSR',
       value: `${metrics.avgCSR.toFixed(2)}%`,
       subtitle: 'Compile Success Rate',
-      color: 'text-red-600',
+      color: 'text-outcome-O1',
     },
     {
       label: 'RSR',
       value: `${metrics.avgRSR.toFixed(2)}%`,
       subtitle: 'Runtime Success Rate',
-      color: 'text-orange-600',
+      color: 'text-outcome-O2',
     },
     {
       label: 'SVR',
       value: `${metrics.avgSVR.toFixed(2)}%`,
       subtitle: 'Semantic Validity Rate',
-      color: 'text-yellow-600',
+      color: 'text-outcome-O3',
     },
   ];
 
@@ -65,19 +65,19 @@ export function SummaryCards({ data }: SummaryCardsProps) {
       label: 'Functionally Correct',
       value: totalFunctionallyCorrect.toLocaleString(),
       subtitle: 'Passing test cases',
-      color: 'text-green-600',
+      color: 'text-outcome-O4',
     },
     {
       label: 'FC%',
       value: `${metrics.avgFC.toFixed(2)}%`,
       subtitle: 'Test Pass Rate',
-      color: 'text-green-600',
+      color: 'text-outcome-O4',
     },
     {
       label: 'Avg Coverage',
       value: `${metrics.avgCoverage.toFixed(2)}%`,
       subtitle: 'Line coverage',
-      color: 'text-blue-600',
+      color: 'text-[#73D13D]',
     },
     {
       label: 'Unique Problems',
@@ -95,7 +95,7 @@ export function SummaryCards({ data }: SummaryCardsProps) {
           <h3 className="text-sm font-medium text-muted-foreground mb-2">
             {card.label}
           </h3>
-          <p className={`text-2xl font-bold ${card.color || ''}`}>
+          <p className={`text-2xl font-bold font-mono ${card.color || ''}`}>
             {card.value}
           </p>
           <p className="text-xs text-muted-foreground mt-1">

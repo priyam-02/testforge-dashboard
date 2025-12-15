@@ -91,14 +91,14 @@ export default function Home() {
   // Show loading state until component is mounted to prevent hydration mismatch
   if (!isMounted) {
     return (
-      <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen p-8 flex items-center justify-center">
         <div className="text-lg text-muted-foreground">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen">
       {/* Header */}
       <div className="text-center pt-8 pb-4 px-8">
         <h1 className="text-4xl font-bold mb-2">TestForge Benchmark Dashboard</h1>
@@ -108,7 +108,7 @@ export default function Home() {
       </div>
 
       {/* Sticky Filters Section */}
-      <div className="sticky top-0 z-50 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
+      <div className="sticky top-0 z-50 bg-background border-b border-border">
         <div className="max-w-7xl mx-auto px-8 py-4 space-y-4">
           {/* Filters */}
           <FilterPanel />

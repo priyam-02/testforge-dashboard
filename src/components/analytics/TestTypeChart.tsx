@@ -37,12 +37,12 @@ export function TestTypeChart({
   // Horizontal bar chart for test-case view
   if (viewMode === "test-case") {
     return (
-      <Card className="p-6 bg-gradient-to-br from-white via-emerald-50/30 to-teal-50/20 dark:from-gray-950 dark:via-emerald-950/20 dark:to-teal-950/10 border-emerald-200/50 dark:border-emerald-800/30 shadow-lg">
+      <Card className="p-6">
         <div className="mb-4">
-          <h3 className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
+          <h3 className="text-xl font-bold text-foreground">
             {title}
           </h3>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 font-medium">
+          <p className="text-sm text-muted-foreground mt-1 font-medium">
             Comparison of test pass rate and coverage across test types
           </p>
         </div>
@@ -53,98 +53,50 @@ export function TestTypeChart({
             margin={{ top: 20, right: 30, left: 10, bottom: 50 }}
             barCategoryGap="15%"
           >
-            <defs>
-              {/* Gradient for FC% bars */}
-              <linearGradient id="fcBarGradient" x1="0" y1="0" x2="1" y2="0">
-                <stop
-                  offset="0%"
-                  stopColor={PERFORMANCE_COLORS.FC}
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="100%"
-                  stopColor={PERFORMANCE_COLORS.FC}
-                  stopOpacity={1}
-                />
-              </linearGradient>
-              {/* Gradient for Coverage bars */}
-              <linearGradient
-                id="coverageBarGradient"
-                x1="0"
-                y1="0"
-                x2="1"
-                y2="0"
-              >
-                <stop
-                  offset="0%"
-                  stopColor={PERFORMANCE_COLORS.Coverage}
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="100%"
-                  stopColor={PERFORMANCE_COLORS.Coverage}
-                  stopOpacity={1}
-                />
-              </linearGradient>
-              {/* Shadow effect */}
-              <filter
-                id="shadow-testtype-bar"
-                x="-50%"
-                y="-50%"
-                width="200%"
-                height="200%"
-              >
-                <feDropShadow
-                  dx="0"
-                  dy="2"
-                  stdDeviation="3"
-                  floodOpacity="0.3"
-                />
-              </filter>
-            </defs>
+            <defs></defs>
             <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="#cbd5e1"
-              opacity={0.4}
+              strokeDasharray="5 5"
+              stroke="#475569"
+              opacity={0.6}
               horizontal={false}
             />
             <XAxis
               type="number"
               domain={[0, 100]}
-              tick={{ fill: "#475569", fontSize: 13, fontWeight: 500 }}
-              axisLine={{ stroke: "#94a3b8", strokeWidth: 2 }}
-              tickLine={{ stroke: "#94a3b8", strokeWidth: 1.5 }}
+              tick={{ fill: "#A6AEC8", fontSize: 12 }}
+              axisLine={{ stroke: "#222736" }}
+              tickLine={{ stroke: "#222736" }}
               ticks={[0, 20, 40, 60, 80, 100]}
             />
             <YAxis
               type="category"
               dataKey="name"
-              tick={{ fill: "#475569", fontSize: 13, fontWeight: 600 }}
-              axisLine={{ stroke: "#94a3b8", strokeWidth: 2 }}
-              tickLine={{ stroke: "#94a3b8", strokeWidth: 1.5 }}
+              tick={{ fill: "#A6AEC8", fontSize: 12 }}
+              axisLine={{ stroke: "#222736" }}
+              tickLine={{ stroke: "#222736" }}
             />
             <Tooltip
               formatter={(value: number) => `${value.toFixed(2)}%`}
               labelFormatter={(label) => `Test Type: ${label}`}
               contentStyle={{
-                backgroundColor: "rgba(15, 23, 42, 0.95)",
-                border: "1px solid rgba(148, 163, 184, 0.3)",
-                borderRadius: "12px",
-                padding: "14px 16px",
-                boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
+                backgroundColor: "rgba(24, 29, 43, 0.95)",
+                border: "1px solid #222736",
+                borderRadius: "8px",
+                padding: "12px 14px",
+                boxShadow: "0 8px 24px rgba(0, 0, 0, 0.45)",
               }}
               labelStyle={{
-                color: "#f1f5f9",
-                fontWeight: 700,
+                color: "#F7F8FF",
+                fontWeight: 600,
                 marginBottom: "8px",
                 fontSize: "14px",
               }}
               itemStyle={{
-                color: "#e2e8f0",
+                color: "#A6AEC8",
                 fontSize: "13px",
                 fontWeight: 500,
               }}
-              cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
+              cursor={{ fill: "rgba(34, 39, 54, 0.2)" }}
             />
             <Legend
               wrapperStyle={{
@@ -158,25 +110,23 @@ export function TestTypeChart({
             />
             <Bar
               dataKey="FC%"
-              fill="url(#fcBarGradient)"
+              fill={PERFORMANCE_COLORS.FC}
               name="FC%"
               radius={[0, 8, 8, 0]}
               stroke={PERFORMANCE_COLORS.FC}
-              strokeWidth={2}
-              filter="url(#shadow-testtype-bar)"
-              animationDuration={700}
-              animationEasing="ease-out"
+              strokeWidth={1}
+              animationDuration={250}
+              animationEasing="ease-in-out"
             />
             <Bar
               dataKey="Coverage"
-              fill="url(#coverageBarGradient)"
+              fill={PERFORMANCE_COLORS.Coverage}
               name="Coverage (%)"
               radius={[0, 8, 8, 0]}
               stroke={PERFORMANCE_COLORS.Coverage}
-              strokeWidth={2}
-              filter="url(#shadow-testtype-bar)"
-              animationDuration={700}
-              animationEasing="ease-out"
+              strokeWidth={1}
+              animationDuration={250}
+              animationEasing="ease-in-out"
             />
           </BarChart>
         </ResponsiveContainer>
@@ -186,12 +136,12 @@ export function TestTypeChart({
 
   // Horizontal bar chart for test-set view (matching test-case view style)
   return (
-    <Card className="p-6 bg-gradient-to-br from-white via-sky-50/30 to-cyan-50/20 dark:from-gray-950 dark:via-sky-950/20 dark:to-cyan-950/10 border-sky-200/50 dark:border-sky-800/30 shadow-lg">
+    <Card className="p-6">
       <div className="mb-8">
-        <h3 className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
+        <h3 className="text-xl font-bold text-foreground">
           {title}
         </h3>
-        <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 font-medium">
+        <p className="text-sm text-muted-foreground mt-2 font-medium">
           Comparison of failure rates and test pass rate across test types
         </p>
       </div>
@@ -202,118 +152,50 @@ export function TestTypeChart({
           margin={{ top: 20, right: 30, left: 10, bottom: 50 }}
           barCategoryGap="15%"
         >
-          <defs>
-            {/* Gradients for CSR bars - horizontal gradient */}
-            <linearGradient
-              id="csrBarGradient-testtype-h"
-              x1="0"
-              y1="0"
-              x2="1"
-              y2="0"
-            >
-              <stop
-                offset="0%"
-                stopColor={PERFORMANCE_COLORS.CSR}
-                stopOpacity={0.8}
-              />
-              <stop
-                offset="100%"
-                stopColor={PERFORMANCE_COLORS.CSR}
-                stopOpacity={1}
-              />
-            </linearGradient>
-            {/* Gradients for RSR bars - horizontal gradient */}
-            <linearGradient
-              id="rsrBarGradient-testtype-h"
-              x1="0"
-              y1="0"
-              x2="1"
-              y2="0"
-            >
-              <stop
-                offset="0%"
-                stopColor={PERFORMANCE_COLORS.RSR}
-                stopOpacity={0.8}
-              />
-              <stop
-                offset="100%"
-                stopColor={PERFORMANCE_COLORS.RSR}
-                stopOpacity={1}
-              />
-            </linearGradient>
-            {/* Gradients for SVR bars - horizontal gradient */}
-            <linearGradient
-              id="svrBarGradient-testtype-h"
-              x1="0"
-              y1="0"
-              x2="1"
-              y2="0"
-            >
-              <stop
-                offset="0%"
-                stopColor={PERFORMANCE_COLORS.SVR}
-                stopOpacity={0.8}
-              />
-              <stop
-                offset="100%"
-                stopColor={PERFORMANCE_COLORS.SVR}
-                stopOpacity={1}
-              />
-            </linearGradient>
-            {/* Shadow effect */}
-            <filter
-              id="shadow-testtype-h"
-              x="-50%"
-              y="-50%"
-              width="200%"
-              height="200%"
-            >
-              <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3" />
-            </filter>
-          </defs>
+          <defs></defs>
           <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="#cbd5e1"
-            opacity={0.4}
+            strokeDasharray="5 5"
+            stroke="#475569"
+            opacity={0.6}
             horizontal={false}
           />
           <XAxis
             type="number"
             domain={[0, 100]}
-            tick={{ fill: "#475569", fontSize: 13, fontWeight: 500 }}
-            axisLine={{ stroke: "#94a3b8", strokeWidth: 2 }}
-            tickLine={{ stroke: "#94a3b8", strokeWidth: 1.5 }}
+            tick={{ fill: "#A6AEC8", fontSize: 12 }}
+            axisLine={{ stroke: "#222736" }}
+            tickLine={{ stroke: "#222736" }}
             ticks={[0, 20, 40, 60, 80, 100]}
           />
           <YAxis
             type="category"
             dataKey="name"
-            tick={{ fill: "#475569", fontSize: 13, fontWeight: 600 }}
-            axisLine={{ stroke: "#94a3b8", strokeWidth: 2 }}
-            tickLine={{ stroke: "#94a3b8", strokeWidth: 1.5 }}
+            tick={{ fill: "#A6AEC8", fontSize: 12 }}
+            axisLine={{ stroke: "#222736" }}
+            tickLine={{ stroke: "#222736" }}
           />
           <Tooltip
             formatter={(value: number) => `${value.toFixed(2)}%`}
             labelFormatter={(label) => `Test Type: ${label}`}
             contentStyle={{
-              backgroundColor: "rgba(15, 23, 42, 0.95)",
-              border: "1px solid rgba(148, 163, 184, 0.3)",
-              borderRadius: "12px",
-              padding: "14px 16px",
-              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
+              backgroundColor: "rgba(24, 29, 43, 0.95)",
+              border: "1px solid #222736",
+              borderRadius: "8px",
+              padding: "12px 14px",
+              boxShadow: "0 8px 24px rgba(0, 0, 0, 0.45)",
             }}
             labelStyle={{
-              color: "#f1f5f9",
-              fontWeight: 700,
+              color: "#F7F8FF",
+              fontWeight: 600,
               marginBottom: "8px",
               fontSize: "14px",
             }}
             itemStyle={{
-              color: "#e2e8f0",
+              color: "#A6AEC8",
               fontSize: "13px",
               fontWeight: 500,
             }}
-            cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
+            cursor={{ fill: "rgba(34, 39, 54, 0.2)" }}
           />
           <Legend
             wrapperStyle={{
@@ -327,36 +209,33 @@ export function TestTypeChart({
           />
           <Bar
             dataKey="CSR"
-            fill="url(#csrBarGradient-testtype-h)"
+            fill={PERFORMANCE_COLORS.CSR}
             name="CSR (%)"
             radius={[0, 8, 8, 0]}
             stroke={PERFORMANCE_COLORS.CSR}
-            strokeWidth={2}
-            filter="url(#shadow-testtype-h)"
-            animationDuration={700}
-            animationEasing="ease-out"
+            strokeWidth={1}
+            animationDuration={250}
+            animationEasing="ease-in-out"
           />
           <Bar
             dataKey="RSR"
-            fill="url(#rsrBarGradient-testtype-h)"
+            fill={PERFORMANCE_COLORS.RSR}
             name="RSR (%)"
             radius={[0, 8, 8, 0]}
             stroke={PERFORMANCE_COLORS.RSR}
-            strokeWidth={2}
-            filter="url(#shadow-testtype-h)"
-            animationDuration={700}
-            animationEasing="ease-out"
+            strokeWidth={1}
+            animationDuration={250}
+            animationEasing="ease-in-out"
           />
           <Bar
             dataKey="SVR"
-            fill="url(#svrBarGradient-testtype-h)"
+            fill={PERFORMANCE_COLORS.SVR}
             name="SVR (%)"
             radius={[0, 8, 8, 0]}
             stroke={PERFORMANCE_COLORS.SVR}
-            strokeWidth={2}
-            filter="url(#shadow-testtype-h)"
-            animationDuration={700}
-            animationEasing="ease-out"
+            strokeWidth={1}
+            animationDuration={250}
+            animationEasing="ease-in-out"
           />
         </BarChart>
       </ResponsiveContainer>

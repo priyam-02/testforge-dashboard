@@ -11,9 +11,9 @@ interface DegradationCardsProps {
 
 export function DegradationCards({ degradation, viewMode }: DegradationCardsProps) {
   const severityColors = {
-    low: 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300',
-    medium: 'bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-300',
-    high: 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300',
+    low: 'bg-[#101421] border-[#36CFC9] text-[#36CFC9]',
+    medium: 'bg-[#101421] border-[#FAAD14] text-[#FAAD14]',
+    high: 'bg-[#101421] border-[#FF4D4F] text-[#FF4D4F]',
   };
 
   const cards = viewMode === 'test-set'
@@ -62,23 +62,23 @@ export function DegradationCards({ degradation, viewMode }: DegradationCardsProp
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <p className="text-sm font-medium">{card.label}</p>
+                <p className="text-sm font-medium text-muted-foreground">{card.label}</p>
                 <Info className="h-4 w-4 opacity-50 group-hover:opacity-100 transition-opacity" />
               </div>
-              <p className="text-2xl font-bold flex items-center gap-2">
+              <p className="text-2xl font-bold font-mono flex items-center gap-2">
                 <TrendingDown className="h-5 w-5" />
                 {Math.abs(card.value).toFixed(2)}{card.suffix}
               </p>
             </div>
           </div>
-          <p className="text-xs mt-2 opacity-75">
+          <p className="text-xs mt-2 text-muted-foreground">
             {degradation.severity === 'high' && 'Significant degradation'}
             {degradation.severity === 'medium' && 'Moderate degradation'}
             {degradation.severity === 'low' && 'Minor degradation'}
           </p>
           {/* Tooltip appears on hover */}
           <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-full max-w-xs z-10">
-            <div className="bg-gray-900 text-white text-xs rounded-lg p-3 shadow-lg">
+            <div className="bg-[#181D2B] text-foreground text-xs rounded-lg p-3 border border-border">
               {card.tooltip}
             </div>
           </div>

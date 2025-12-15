@@ -1,8 +1,17 @@
-'use client';
+"use client";
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Card } from '@/components/ui/card';
-import type { TestSetMetrics } from '@/types/metrics';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import { Card } from "@/components/ui/card";
+import type { TestSetMetrics } from "@/types/metrics";
 
 interface TestSetMetricsChartProps {
   data: TestSetMetrics[];
@@ -11,11 +20,18 @@ interface TestSetMetricsChartProps {
 
 export function TestSetMetricsChart({ data, title }: TestSetMetricsChartProps) {
   // Aggregate data by LLM to avoid duplicate bars when multiple configs exist
-  const aggregatedByLLM = new Map<string, { csr_values: number[]; rsr_values: number[]; svr_values: number[] }>();
+  const aggregatedByLLM = new Map<
+    string,
+    { csr_values: number[]; rsr_values: number[]; svr_values: number[] }
+  >();
 
   data.forEach((row) => {
     if (!aggregatedByLLM.has(row.llm)) {
-      aggregatedByLLM.set(row.llm, { csr_values: [], rsr_values: [], svr_values: [] });
+      aggregatedByLLM.set(row.llm, {
+        csr_values: [],
+        rsr_values: [],
+        svr_values: [],
+      });
     }
     aggregatedByLLM.get(row.llm)!.csr_values.push(row.csr_percentage);
     aggregatedByLLM.get(row.llm)!.rsr_values.push(row.rsr_percentage);
@@ -23,12 +39,20 @@ export function TestSetMetricsChart({ data, title }: TestSetMetricsChartProps) {
   });
 
   // Calculate averages for each LLM
-  const chartData = Array.from(aggregatedByLLM.entries()).map(([llm, values]) => ({
-    name: llm,
-    CSR: values.csr_values.reduce((sum, val) => sum + val, 0) / values.csr_values.length,
-    RSR: values.rsr_values.reduce((sum, val) => sum + val, 0) / values.rsr_values.length,
-    SVR: values.svr_values.reduce((sum, val) => sum + val, 0) / values.svr_values.length,
-  }));
+  const chartData = Array.from(aggregatedByLLM.entries()).map(
+    ([llm, values]) => ({
+      name: llm,
+      CSR:
+        values.csr_values.reduce((sum, val) => sum + val, 0) /
+        values.csr_values.length,
+      RSR:
+        values.rsr_values.reduce((sum, val) => sum + val, 0) /
+        values.rsr_values.length,
+      SVR:
+        values.svr_values.reduce((sum, val) => sum + val, 0) /
+        values.svr_values.length,
+    })
+  );
 
   // Adjust spacing for single vs multiple LLMs
   const barCategoryGap = chartData.length === 1 ? "35%" : "20%";
@@ -63,34 +87,97 @@ export function TestSetMetricsChart({ data, title }: TestSetMetricsChartProps) {
               <rect width="4" height="8" fill="rgba(255, 255, 255, 0.2)" />
             </pattern>
             {/* Gradients for CSR with pattern */}
-            <linearGradient id="csrGradient-testset" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient
+              id="csrGradient-testset"
+              x1="0"
+              y1="0"
+              x2="0"
+              y2="1"
+            >
               <stop offset="0%" stopColor="#3b82f6" stopOpacity={1} />
               <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.7} />
             </linearGradient>
-            <pattern id="csrPattern-testset" patternUnits="objectBoundingBox" width="1" height="1">
-              <rect width="100%" height="100%" fill="url(#csrGradient-testset)" />
-              <rect width="100%" height="100%" fill="url(#stripePattern-testset)" />
+            <pattern
+              id="csrPattern-testset"
+              patternUnits="objectBoundingBox"
+              width="1"
+              height="1"
+            >
+              <rect
+                width="100%"
+                height="100%"
+                fill="url(#csrGradient-testset)"
+              />
+              <rect
+                width="100%"
+                height="100%"
+                fill="url(#stripePattern-testset)"
+              />
             </pattern>
             {/* Gradients for RSR with pattern */}
-            <linearGradient id="rsrGradient-testset" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient
+              id="rsrGradient-testset"
+              x1="0"
+              y1="0"
+              x2="0"
+              y2="1"
+            >
               <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
               <stop offset="100%" stopColor="#10b981" stopOpacity={0.7} />
             </linearGradient>
-            <pattern id="rsrPattern-testset" patternUnits="objectBoundingBox" width="1" height="1">
-              <rect width="100%" height="100%" fill="url(#rsrGradient-testset)" />
-              <rect width="100%" height="100%" fill="url(#stripePattern-testset)" />
+            <pattern
+              id="rsrPattern-testset"
+              patternUnits="objectBoundingBox"
+              width="1"
+              height="1"
+            >
+              <rect
+                width="100%"
+                height="100%"
+                fill="url(#rsrGradient-testset)"
+              />
+              <rect
+                width="100%"
+                height="100%"
+                fill="url(#stripePattern-testset)"
+              />
             </pattern>
             {/* Gradients for SVR with pattern */}
-            <linearGradient id="svrGradient-testset" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient
+              id="svrGradient-testset"
+              x1="0"
+              y1="0"
+              x2="0"
+              y2="1"
+            >
               <stop offset="0%" stopColor="#f59e0b" stopOpacity={1} />
               <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.7} />
             </linearGradient>
-            <pattern id="svrPattern-testset" patternUnits="objectBoundingBox" width="1" height="1">
-              <rect width="100%" height="100%" fill="url(#svrGradient-testset)" />
-              <rect width="100%" height="100%" fill="url(#stripePattern-testset)" />
+            <pattern
+              id="svrPattern-testset"
+              patternUnits="objectBoundingBox"
+              width="1"
+              height="1"
+            >
+              <rect
+                width="100%"
+                height="100%"
+                fill="url(#svrGradient-testset)"
+              />
+              <rect
+                width="100%"
+                height="100%"
+                fill="url(#stripePattern-testset)"
+              />
             </pattern>
             {/* Shadow effect */}
-            <filter id="shadow-testset" x="-50%" y="-50%" width="200%" height="200%">
+            <filter
+              id="shadow-testset"
+              x="-50%"
+              y="-50%"
+              width="200%"
+              height="200%"
+            >
               <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3" />
             </filter>
           </defs>
