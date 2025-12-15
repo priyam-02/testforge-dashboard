@@ -10,11 +10,22 @@ interface TestCaseMetricsChartProps {
 }
 
 export function TestCaseMetricsChart({ data, title }: TestCaseMetricsChartProps) {
-  // Prepare chart data
-  const chartData = data.map((row) => ({
-    name: row.llm,
-    FC: row.fc_percentage,
-    Coverage: row.avg_line_coverage,
+  // Aggregate data by LLM to avoid duplicate bars when multiple configs exist
+  const aggregatedByLLM = new Map<string, { fc_values: number[]; coverage_values: number[] }>();
+
+  data.forEach((row) => {
+    if (!aggregatedByLLM.has(row.llm)) {
+      aggregatedByLLM.set(row.llm, { fc_values: [], coverage_values: [] });
+    }
+    aggregatedByLLM.get(row.llm)!.fc_values.push(row.fc_percentage);
+    aggregatedByLLM.get(row.llm)!.coverage_values.push(row.avg_line_coverage);
+  });
+
+  // Calculate averages for each LLM
+  const chartData = Array.from(aggregatedByLLM.entries()).map(([llm, values]) => ({
+    name: llm,
+    FC: values.fc_values.reduce((sum, val) => sum + val, 0) / values.fc_values.length,
+    Coverage: values.coverage_values.reduce((sum, val) => sum + val, 0) / values.coverage_values.length,
   }));
 
   return (

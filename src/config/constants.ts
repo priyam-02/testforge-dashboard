@@ -108,3 +108,26 @@ export function getComplexityColor(complexity: string): string {
   const config = COMPLEXITIES.find((c) => c.value === complexity || c.label === complexity);
   return config?.color || '#64748b';
 }
+
+// Performance Colors for Analytics Dashboard (Polyglot-style)
+export const PERFORMANCE_COLORS = {
+  CSR: '#ef4444',      // red-500 (worst - compilation failures)
+  RSR: '#f97316',      // orange-500 (runtime failures)
+  SVR: '#eab308',      // yellow-500 (semantic validity issues)
+  FC: '#22c55e',       // green-500 (best - functional correctness)
+  Coverage: '#3b82f6', // blue-500 (line coverage)
+} as const;
+
+// Heatmap Colors for Performance Matrix
+export const HEATMAP_COLORS = {
+  low: '#ef4444',      // red-500 (0-33%)
+  medium: '#eab308',   // yellow-500 (34-66%)
+  high: '#22c55e',     // green-500 (67-100%)
+} as const;
+
+// Helper function to get heatmap color based on percentage value
+export function getHeatmapColor(value: number): string {
+  if (value < 33) return HEATMAP_COLORS.low;
+  if (value < 67) return HEATMAP_COLORS.medium;
+  return HEATMAP_COLORS.high;
+}

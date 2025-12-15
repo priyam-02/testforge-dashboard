@@ -3,41 +3,58 @@
 import { useEffect, useState } from 'react';
 import { FilterPanel } from '@/components/filters/FilterPanel';
 import { MetricViewToggle } from '@/components/filters/MetricViewToggle';
-import { TestSetMetricsChart } from '@/components/charts/TestSetMetricsChart';
-import { TestCaseMetricsChart } from '@/components/charts/TestCaseMetricsChart';
-import { TestSetMetricsTable } from '@/components/tables/TestSetMetricsTable';
-import { TestCaseMetricsTable } from '@/components/tables/TestCaseMetricsTable';
+import { SummaryCards } from '@/components/analytics/SummaryCards';
+import { LLMComparisonChart } from '@/components/analytics/LLMComparisonChart';
+import { ComplexityTrendChart } from '@/components/analytics/ComplexityTrendChart';
+import { TestTypeChart } from '@/components/analytics/TestTypeChart';
+import { PromptStrategyChart } from '@/components/analytics/PromptStrategyChart';
+import { PerformanceHeatmap } from '@/components/analytics/PerformanceHeatmap';
+import { DegradationCards } from '@/components/analytics/DegradationCards';
+import { CoverageFCGapChart } from '@/components/analytics/CoverageFCGapChart';
+import { MetricsExplanation } from '@/components/info/MetricsExplanation';
 import { useFilters } from '@/hooks/useFilters';
-import { filterTestSetMetrics, filterTestCaseMetrics, determineAggregationLevel } from '@/lib/data/filter-data';
+import { filterTestSetMetrics, filterTestCaseMetrics } from '@/lib/data/filter-data';
+import {
+  combineMetricsByLLM,
+  aggregateByComplexity,
+  aggregateByTestType,
+  aggregateByPrompt,
+  transformToHeatmap,
+  calculateDegradationMetrics,
+} from '@/lib/data/aggregate-metrics';
 import type { TestSetMetrics, TestCaseMetrics } from '@/types/metrics';
 
 export default function Home() {
   const filters = useFilters();
-  const [testSetData, setTestSetData] = useState<TestSetMetrics[]>([]);
-  const [testCaseData, setTestCaseData] = useState<TestCaseMetrics[]>([]);
+  const [rawTestSetData, setRawTestSetData] = useState<TestSetMetrics[]>([]);
+  const [rawTestCaseData, setRawTestCaseData] = useState<TestCaseMetrics[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
 
+  // Prevent hydration mismatch by only rendering after client mount
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Load all data once on mount
+  useEffect(() => {
+    if (!isMounted) return;
+
     async function loadData() {
       setLoading(true);
       try {
-        const aggregation = determineAggregationLevel(filters);
-
-        // Load data from API routes (we'll create these)
+        // Load the most detailed data (full granularity) once
+        // This allows us to filter client-side without refetching
         const [testSetRes, testCaseRes] = await Promise.all([
-          fetch(`/api/test-set-metrics/${aggregation}`),
-          fetch(`/api/test-case-metrics/${aggregation}`),
+          fetch(`/api/test-set-metrics/full_config`),
+          fetch(`/api/test-case-metrics/full_config`),
         ]);
 
         const testSetJson = await testSetRes.json();
         const testCaseJson = await testCaseRes.json();
 
-        // Filter the data based on active filters
-        const filteredTestSet = filterTestSetMetrics(testSetJson.data, filters);
-        const filteredTestCase = filterTestCaseMetrics(testCaseJson.data, filters);
-
-        setTestSetData(filteredTestSet);
-        setTestCaseData(filteredTestCase);
+        setRawTestSetData(testSetJson.data);
+        setRawTestCaseData(testCaseJson.data);
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -46,24 +63,64 @@ export default function Home() {
     }
 
     loadData();
-  }, [filters.llm, filters.promptStrategy, filters.complexity, filters.testType]);
+  }, [isMounted]);
+
+  // Filter data client-side when filters change (instant transitions!)
+  // Add guards to prevent errors during initial render
+  const testSetData = (rawTestSetData && rawTestSetData.length > 0) ? filterTestSetMetrics(rawTestSetData, filters) : [];
+  const testCaseData = (rawTestCaseData && rawTestCaseData.length > 0) ? filterTestCaseMetrics(rawTestCaseData, filters) : [];
+
+  // Calculate aggregated data for analytics view based on metric view
+  // For test-set view, use empty test case data; for test-case view, use empty test set data
+  const isTestSetView = filters.metricView === 'test-set';
+  const llmComparison = isTestSetView
+    ? combineMetricsByLLM(testSetData, [])
+    : combineMetricsByLLM([], testCaseData);
+  const complexityData = isTestSetView
+    ? aggregateByComplexity(testSetData, [])
+    : aggregateByComplexity([], testCaseData);
+  const testTypeData = isTestSetView
+    ? aggregateByTestType(testSetData, [])
+    : aggregateByTestType([], testCaseData);
+  const promptData = isTestSetView
+    ? aggregateByPrompt(testSetData, [])
+    : aggregateByPrompt([], testCaseData);
+  const heatmapData = transformToHeatmap(testCaseData);
+  const degradationMetrics = calculateDegradationMetrics(complexityData);
+
+  // Show loading state until component is mounted to prevent hydration mismatch
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-lg text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900">
-      <main className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">TestForge Benchmark Dashboard</h1>
-          <p className="text-muted-foreground">
-            Interactive visualization of test generation metrics across LLMs, strategies, and configurations
-          </p>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Header */}
+      <div className="text-center pt-8 pb-4 px-8">
+        <h1 className="text-4xl font-bold mb-2">TestForge Benchmark Dashboard</h1>
+        <p className="text-muted-foreground">
+          Interactive visualization of test generation metrics across LLMs, strategies, and configurations
+        </p>
+      </div>
+
+      {/* Sticky Filters Section */}
+      <div className="sticky top-0 z-50 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
+        <div className="max-w-7xl mx-auto px-8 py-4 space-y-4">
+          {/* Filters */}
+          <FilterPanel />
+
+          {/* Metric View Toggle */}
+          <MetricViewToggle />
         </div>
+      </div>
 
-        {/* Filters */}
-        <FilterPanel />
-
-        {/* Metric View Toggle */}
-        <MetricViewToggle />
+      <main className="max-w-7xl mx-auto p-8 space-y-6">
+        {/* Metrics Explanation */}
+        <MetricsExplanation metricView={filters.metricView} />
 
         {/* Loading State */}
         {loading && (
@@ -72,51 +129,86 @@ export default function Home() {
           </div>
         )}
 
-        {/* Test Set Metrics View */}
-        {!loading && filters.metricView === 'test-set' && (
+        {/* Analytics View - Test Set Metrics */}
+        {!loading && isTestSetView && (
           <div className="space-y-6">
-            <TestSetMetricsChart
-              data={testSetData}
-              title="Test Set Metrics Comparison"
+            {/* Summary Cards */}
+            <SummaryCards
+              data={{
+                testSet: testSetData,
+                testCase: []
+              }}
             />
-            <TestSetMetricsTable data={testSetData} />
+
+            {/* Degradation Metrics */}
+            {degradationMetrics && (
+              <DegradationCards
+                degradation={degradationMetrics}
+                viewMode="test-set"
+              />
+            )}
+
+            {/* LLM Comparison Chart - CSR, RSR, SVR */}
+            <LLMComparisonChart data={llmComparison} viewMode="test-set" />
+
+            {/* Two-column grid for complexity and test type */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ComplexityTrendChart
+                data={complexityData}
+                viewMode="test-set"
+                selectedComplexity={filters.complexity}
+              />
+              <TestTypeChart data={testTypeData} viewMode="test-set" />
+            </div>
+
+            {/* Prompt Strategy Chart - CSR, RSR, SVR */}
+            <PromptStrategyChart data={promptData} metricView="test-set" />
           </div>
         )}
 
-        {/* Test Case Metrics View */}
-        {!loading && filters.metricView === 'test-case' && (
+        {/* Analytics View - Test Case Metrics */}
+        {!loading && !isTestSetView && (
           <div className="space-y-6">
-            <TestCaseMetricsChart
-              data={testCaseData}
-              title="Test Case Metrics Comparison"
+            {/* Summary Cards */}
+            <SummaryCards
+              data={{
+                testSet: [],
+                testCase: testCaseData
+              }}
             />
-            <TestCaseMetricsTable data={testCaseData} />
+
+            {/* Degradation Metrics */}
+            {degradationMetrics && (
+              <DegradationCards
+                degradation={degradationMetrics}
+                viewMode="test-case"
+              />
+            )}
+
+            {/* LLM Comparison Chart - FC% only */}
+            <LLMComparisonChart data={llmComparison} viewMode="test-case" />
+
+            {/* Coverage-FC Gap Chart - Highlight the key finding */}
+            <CoverageFCGapChart data={llmComparison} />
+
+            {/* Two-column grid for complexity and test type */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ComplexityTrendChart
+                data={complexityData}
+                viewMode="test-case"
+                selectedComplexity={filters.complexity}
+              />
+              <TestTypeChart data={testTypeData} viewMode="test-case" />
+            </div>
+
+            {/* Prompt Strategy Chart - FC% only */}
+            <PromptStrategyChart data={promptData} metricView="test-case" />
+
+            {/* Performance Heatmap - FC% across LLM × Test Type */}
+            <PerformanceHeatmap data={heatmapData} />
           </div>
         )}
 
-        {/* Data Summary */}
-        {!loading && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">Active Filters</h3>
-              <p className="text-2xl font-bold">
-                {filters.hasActiveFilters() ? 'Filtered' : 'All Data'}
-              </p>
-            </div>
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">Configurations</h3>
-              <p className="text-2xl font-bold">
-                {filters.metricView === 'test-set' ? testSetData.length : testCaseData.length}
-              </p>
-            </div>
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">Metric View</h3>
-              <p className="text-2xl font-bold">
-                {filters.metricView === 'test-set' ? 'Test Sets' : 'Test Cases'}
-              </p>
-            </div>
-          </div>
-        )}
       </main>
     </div>
   );

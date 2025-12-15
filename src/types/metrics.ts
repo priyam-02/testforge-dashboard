@@ -119,3 +119,75 @@ export interface ApiResponse<T> {
   timestamp?: string;
   error?: string;
 }
+
+// Analytics Interfaces for Polyglot-style visualizations
+
+// Combined metrics interface (Test Set + Test Case)
+export interface CombinedMetrics {
+  llm: string;
+  csr_percentage: number;
+  rsr_percentage: number;
+  svr_percentage: number;
+  fc_percentage: number;
+  avg_line_coverage: number;
+  functionally_correct_cases: number;
+  total_test_cases: number;
+}
+
+// Aggregated by complexity
+export interface AggregatedByComplexity {
+  complexity: string;
+  csr_percentage: number;
+  rsr_percentage: number;
+  svr_percentage: number;
+  fc_percentage: number;
+  avg_line_coverage: number;
+}
+
+// Aggregated by test type
+export interface AggregatedByTestType {
+  test_type: string;
+  csr_percentage: number;
+  rsr_percentage: number;
+  svr_percentage: number;
+  fc_percentage: number;
+  avg_line_coverage: number;
+}
+
+// Aggregated by prompt
+export interface AggregatedByPrompt {
+  prompt_type: string;
+  csr_percentage: number;
+  rsr_percentage: number;
+  svr_percentage: number;
+  fc_percentage: number;
+  avg_line_coverage: number;
+}
+
+// Heatmap data
+export interface HeatmapData {
+  llm: string;
+  test_type: string;
+  value: number; // FC percentage
+}
+
+// Summary metrics
+export interface SummaryMetrics {
+  totalTests: number;
+  uniqueProblems: number;
+  avgCSR: number;
+  avgRSR: number;
+  avgSVR: number;
+  avgFC: number;
+  avgCoverage: number;
+}
+
+// Degradation metrics (Easy → Hard performance drop)
+export interface DegradationMetrics {
+  csrDrop: number;
+  rsrDrop: number;
+  svrDrop: number;
+  fcDrop: number;
+  coverageDrop: number;
+  severity: 'low' | 'medium' | 'high';
+}

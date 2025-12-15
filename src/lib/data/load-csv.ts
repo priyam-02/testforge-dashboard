@@ -28,7 +28,7 @@ function normalizeTestType(value: string): string {
  * Normalize a single row of metrics data to ensure consistent format
  * Applies normalization to prompt_type and test_type fields if present
  */
-function normalizeMetricsRow<T extends Record<string, any>>(row: T): T {
+function normalizeMetricsRow(row: Record<string, unknown>): Record<string, unknown> {
   const normalized = { ...row };
 
   // Normalize prompt_type if present (handles TSM Title-Case vs TCM snake_case)
@@ -66,7 +66,7 @@ export async function loadTestSetMetrics(aggregation: TestSetAggregation): Promi
     }
 
     // Apply normalization to all rows to ensure consistent format
-    return parsed.data.map(normalizeMetricsRow);
+    return parsed.data.map((row) => normalizeMetricsRow(row as unknown as Record<string, unknown>)) as unknown as TestSetMetrics[];
   } catch (error) {
     console.error(`Error loading test set metrics (${aggregation}):`, error);
     throw error;
@@ -95,7 +95,7 @@ export async function loadTestCaseMetrics(aggregation: TestCaseAggregation): Pro
     }
 
     // Apply normalization to all rows to ensure consistent format
-    return parsed.data.map(normalizeMetricsRow);
+    return parsed.data.map((row) => normalizeMetricsRow(row as unknown as Record<string, unknown>)) as unknown as TestCaseMetrics[];
   } catch (error) {
     console.error(`Error loading test case metrics (${aggregation}):`, error);
     throw error;

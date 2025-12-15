@@ -67,39 +67,16 @@ export function filterTestCaseMetrics(
 /**
  * Determine which CSV aggregation level to load based on active filters
  * This optimizes data loading by choosing the most appropriate pre-aggregated file
+ *
+ * NOTE: For the Analytics view, we ALWAYS load 'full_config' to ensure all charts
+ * (Complexity, Test Type, Prompt Strategy) have access to all dimensions they need.
+ * Client-side filtering is then applied to the full dataset.
  */
 export function determineAggregationLevel(filters: FilterState):
   'llm' | 'llm_prompt' | 'llm_test' | 'llm_prompt_comp' | 'llm_prompt_test' | 'full_config' {
 
-  const hasPrompt = !!filters.promptStrategy;
-  const hasTest = !!filters.testType;
-  const hasComplexity = !!filters.complexity;
-
-  // Full configuration: all dimensions
-  if (hasPrompt && hasTest && hasComplexity) {
-    return 'full_config';
-  }
-
-  // LLM × Prompt × Test Type
-  if (hasPrompt && hasTest) {
-    return 'llm_prompt_test';
-  }
-
-  // LLM × Prompt × Complexity
-  if (hasPrompt && hasComplexity) {
-    return 'llm_prompt_comp';
-  }
-
-  // LLM × Prompt
-  if (hasPrompt) {
-    return 'llm_prompt';
-  }
-
-  // LLM × Test Type
-  if (hasTest) {
-    return 'llm_test';
-  }
-
-  // Default: LLM only (smallest aggregation)
-  return 'llm';
+  // Always load full_config for Analytics view
+  // This ensures all charts can display all their respective dimensions
+  // even when other filters are active
+  return 'full_config';
 }
