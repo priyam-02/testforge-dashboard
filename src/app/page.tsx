@@ -112,25 +112,27 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Header Section - Static */}
-      <div className="max-w-7xl mx-auto p-8">
+      <div className="max-w-7xl mx-auto px-8 pt-8 pb-4">
         <Card className="p-6">
           <div className="text-start">
-            <h1 className="text-4xl font-bold mb-4 text-foreground">
+            <h1 className="text-3xl font-bold mb-4 text-foreground">
               TestForge: Benchmarking LLM-Based Test Case Generation
             </h1>
 
             {/* Action Buttons and Authors */}
             <div className="flex flex-wrap items-center gap-3 mb-4">
-              <Button variant="outline" size="default" className="gap-2">
-                <FileText className="w-4 h-4" />
-                Abstract
+              <Button variant="outline" size="sm" className="gap-2" asChild>
+                <a
+                  href="https://conf.researchr.org/details/saner-2026/saner-2026-papers/38/TestForge-A-Benchmarking-Framework-for-LLM-Based-Test-Case-Generation"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <FileText className="w-4 h-4" />
+                  Abstract
+                  <ExternalLink className="w-3 h-3" />
+                </a>
               </Button>
-              <Button
-                variant="outline"
-                size="default"
-                className="gap-2"
-                asChild
-              >
+              <Button variant="outline" size="sm" className="gap-2" asChild>
                 <a
                   href="https://figshare.com/s/a6b69b07e8fa134acb39?file=59094464"
                   target="_blank"
@@ -143,14 +145,14 @@ export default function Home() {
               </Button>
               <div className="h-6 w-px bg-border" />
               <div className="flex flex-wrap items-center gap-2 text-base">
-                <span className="text-muted-foreground font-medium">
+                <span className="text-muted-foreground font-small">
                   Authors:
                 </span>
                 <a
                   href="https://mpvieira.github.io/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary hover:underline font-medium inline-flex items-center gap-1"
+                  className="text-primary hover:underline font-small inline-flex items-center gap-1"
                 >
                   Marco Vieira
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -160,7 +162,7 @@ export default function Home() {
                   href="https://www.linkedin.com/in/priyamshahh/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary hover:underline font-medium inline-flex items-center gap-1"
+                  className="text-primary hover:underline font-small inline-flex items-center gap-1"
                 >
                   Priyam Shah
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -170,7 +172,7 @@ export default function Home() {
                   href="https://www.linkedin.com/in/bhavainshah/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary hover:underline font-medium inline-flex items-center gap-1"
+                  className="text-primary hover:underline font-small inline-flex items-center gap-1"
                 >
                   Bhavain Shah
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -180,13 +182,16 @@ export default function Home() {
                   href="https://www.linkedin.com/in/vineetkhadloya/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary hover:underline font-medium inline-flex items-center gap-1"
+                  className="text-primary hover:underline font-small inline-flex items-center gap-1"
                 >
                   Vineet Khadloya
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               </div>
             </div>
+
+            {/* Separator Line */}
+            <div className="border-t border-border my-4" />
 
             {/* Description */}
             <p className="text-base leading-relaxed text-muted-foreground">
