@@ -3,7 +3,6 @@
 import { Card } from '@/components/ui/card';
 import type { TestSetMetrics, TestCaseMetrics } from '@/types/metrics';
 import { calculateSummaryMetrics } from '@/lib/data/aggregate-metrics';
-import { Info } from 'lucide-react';
 
 interface OutcomeSummaryCardsProps {
   data: TestSetMetrics[];

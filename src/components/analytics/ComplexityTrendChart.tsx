@@ -3,20 +3,18 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card } from '@/components/ui/card';
 import { PERFORMANCE_COLORS } from '@/config/constants';
-import type { AggregatedByComplexity, Complexity } from '@/types/metrics';
+import type { AggregatedByComplexity } from '@/types/metrics';
 
 interface ComplexityTrendChartProps {
   data: AggregatedByComplexity[];
   title?: string;
   viewMode?: 'test-set' | 'test-case';
-  selectedComplexity?: Complexity | null;
 }
 
 export function ComplexityTrendChart({
   data,
   title = 'Performance by Complexity Level',
   viewMode = 'test-set',
-  selectedComplexity = null
 }: ComplexityTrendChartProps) {
   // Define all possible complexity levels
   const allComplexities = ['Easy', 'Moderate', 'Hard'];
