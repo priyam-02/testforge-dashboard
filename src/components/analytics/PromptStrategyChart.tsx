@@ -53,13 +53,6 @@ export function PromptStrategyChart({
     return dataPoint;
   });
 
-  // TestForge Design System - Prompt Strategy Colors
-  const strategyColors = {
-    "Zero-Shot": "#FAAD14", // outcome.O2 (orange)
-    "Few-Shot": "#597EF7", // model.qwen32b (indigo)
-    "Chain-of-Thought": "#36CFC9", // outcome.O4 (teal)
-  };
-
   // Use same colors for bar chart (consistency)
   const barColors = {
     "Zero-Shot": "#FAAD14",

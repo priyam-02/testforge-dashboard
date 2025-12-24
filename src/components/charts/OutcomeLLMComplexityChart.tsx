@@ -32,7 +32,7 @@ export function OutcomeLLMComplexityChart({
   const uniqueLLMs = Array.from(new Set(data.map((d) => d.llm))).sort();
 
   // Group data by complexity, with each LLM as a separate data point
-  const complexityGroups = new Map<string, any>();
+  const complexityGroups = new Map<string, Record<string, string | number>>();
 
   data.forEach((point) => {
     const complexityKey =

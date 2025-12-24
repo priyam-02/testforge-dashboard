@@ -286,7 +286,6 @@ export default function Home() {
               <ComplexityTrendChart
                 data={complexityData}
                 viewMode="test-set"
-                selectedComplexity={filters.complexity}
               />
               <TestTypeChart data={testTypeData} viewMode="test-set" />
             </div>
@@ -326,7 +325,6 @@ export default function Home() {
               <ComplexityTrendChart
                 data={complexityData}
                 viewMode="test-case"
-                selectedComplexity={filters.complexity}
               />
               <TestTypeChart data={testTypeData} viewMode="test-case" />
             </div>

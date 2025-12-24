@@ -31,7 +31,7 @@ export function FCLLMPromptChart({
   const uniqueLLMs = Array.from(new Set(data.map((d) => d.llm))).sort();
 
   // Group data by prompt type
-  const promptGroups = new Map<string, any>();
+  const promptGroups = new Map<string, Record<string, string | number>>();
 
   data.forEach((point) => {
     const promptLabel =
