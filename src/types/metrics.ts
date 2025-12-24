@@ -14,7 +14,7 @@ export type TestType = 'standard' | 'boundary' | 'mix';
 export type Complexity = 'Easy' | 'Moderate' | 'Hard';
 
 // Metric View Types
-export type MetricView = 'test-set' | 'test-case';
+export type MetricView = 'test-set' | 'test-case' | 'outcomes';
 
 // Filter State Interface
 export interface FilterState {
@@ -180,6 +180,10 @@ export interface SummaryMetrics {
   avgSVR: number;
   avgFC: number;
   avgCoverage: number;
+  avgO1: number;
+  avgO2: number;
+  avgO3: number;
+  avgO4: number;
 }
 
 // Degradation metrics (Easy → Hard performance drop)
@@ -190,4 +194,45 @@ export interface DegradationMetrics {
   fcDrop: number;
   coverageDrop: number;
   severity: 'low' | 'medium' | 'high';
+}
+
+// Outcome metrics (O1-O4) - Complete partition interface
+export interface OutcomeMetrics {
+  llm: string;
+  total_expected: number;
+  O1_percentage: number;
+  O2_percentage: number;
+  O3_percentage: number;
+  O4_percentage: number;
+  O1_count: number;
+  O2_count: number;
+  O3_count: number;
+  O4_count: number;
+}
+
+export interface AggregatedOutcomesByComplexity {
+  complexity: string;
+  O1_percentage: number;
+  O2_percentage: number;
+  O3_percentage: number;
+  O4_percentage: number;
+  total_expected: number;
+}
+
+export interface AggregatedOutcomesByTestType {
+  test_type: string;
+  O1_percentage: number;
+  O2_percentage: number;
+  O3_percentage: number;
+  O4_percentage: number;
+  total_expected: number;
+}
+
+export interface AggregatedOutcomesByPrompt {
+  prompt_type: string;
+  O1_percentage: number;
+  O2_percentage: number;
+  O3_percentage: number;
+  O4_percentage: number;
+  total_expected: number;
 }

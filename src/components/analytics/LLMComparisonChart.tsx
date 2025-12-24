@@ -1,8 +1,8 @@
 "use client";
 
 import {
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -34,9 +34,6 @@ export function LLMComparisonChart({
     Coverage: row.avg_line_coverage,
   }));
 
-  // Adjust spacing for single vs multiple LLMs
-  const barCategoryGap = chartData.length === 1 ? "35%" : "20%";
-
   return (
     <Card className="p-6">
       <div className="mb-10">
@@ -48,12 +45,9 @@ export function LLMComparisonChart({
         </p>
       </div>
       <ResponsiveContainer width="100%" height={520}>
-        <BarChart
+        <LineChart
           data={chartData}
           margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-          maxBarSize={60}
-          barGap={4}
-          barCategoryGap={barCategoryGap}
         >
           <defs></defs>
           <CartesianGrid
@@ -113,69 +107,72 @@ export function LLMComparisonChart({
               fontSize: "14px",
               fontWeight: 600,
             }}
-            iconType="rect"
-            iconSize={14}
+            iconType="circle"
+            iconSize={10}
           />
           {viewMode === "test-set" ? (
             <>
-              <Bar
+              <Line
+                type="monotone"
                 dataKey="CSR"
-                fill={PERFORMANCE_COLORS.CSR}
-                name="CSR (%)"
-                radius={[8, 8, 0, 0]}
                 stroke={PERFORMANCE_COLORS.CSR}
-                strokeWidth={1}
+                name="CSR (%)"
+                strokeWidth={3}
+                dot={{ fill: PERFORMANCE_COLORS.CSR, r: 5 }}
+                activeDot={{ r: 7 }}
                 animationDuration={250}
                 animationEasing="ease-in-out"
               />
-              <Bar
+              <Line
+                type="monotone"
                 dataKey="RSR"
-                fill={PERFORMANCE_COLORS.RSR}
-                name="RSR (%)"
-                radius={[8, 8, 0, 0]}
                 stroke={PERFORMANCE_COLORS.RSR}
-                strokeWidth={1}
+                name="RSR (%)"
+                strokeWidth={3}
+                dot={{ fill: PERFORMANCE_COLORS.RSR, r: 5 }}
+                activeDot={{ r: 7 }}
                 animationDuration={250}
                 animationEasing="ease-in-out"
               />
-              <Bar
+              <Line
+                type="monotone"
                 dataKey="SVR"
-                fill={PERFORMANCE_COLORS.SVR}
-                name="SVR (%)"
-                radius={[8, 8, 0, 0]}
                 stroke={PERFORMANCE_COLORS.SVR}
-                strokeWidth={1}
+                name="SVR (%)"
+                strokeWidth={3}
+                dot={{ fill: PERFORMANCE_COLORS.SVR, r: 5 }}
+                activeDot={{ r: 7 }}
                 animationDuration={250}
                 animationEasing="ease-in-out"
               />
             </>
           ) : (
             <>
-              <Bar
+              <Line
+                type="monotone"
                 dataKey="FC%"
-                fill={PERFORMANCE_COLORS.FC}
-                name="FC%"
-                radius={[8, 8, 0, 0]}
                 stroke={PERFORMANCE_COLORS.FC}
-                strokeWidth={1}
+                name="FC%"
+                strokeWidth={3}
+                dot={{ fill: PERFORMANCE_COLORS.FC, r: 5 }}
+                activeDot={{ r: 7 }}
                 animationDuration={250}
                 animationEasing="ease-in-out"
-                barSize={chartData.length === 1 ? 60 : undefined}
               />
-              <Bar
+              <Line
+                type="monotone"
                 dataKey="Coverage"
-                fill={PERFORMANCE_COLORS.Coverage}
-                name="Coverage (%)"
-                radius={[8, 8, 0, 0]}
                 stroke={PERFORMANCE_COLORS.Coverage}
-                strokeWidth={1}
+                name="Coverage (%)"
+                strokeWidth={3}
+                dot={{ fill: PERFORMANCE_COLORS.Coverage, r: 5 }}
+                activeDot={{ r: 7 }}
                 animationDuration={250}
                 animationEasing="ease-in-out"
-                barSize={chartData.length === 1 ? 60 : undefined}
               />
             </>
           )}
-        </BarChart>
+        </LineChart>
       </ResponsiveContainer>
     </Card>
   );

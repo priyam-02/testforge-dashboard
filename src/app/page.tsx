@@ -8,10 +8,9 @@ import { LLMComparisonChart } from "@/components/analytics/LLMComparisonChart";
 import { ComplexityTrendChart } from "@/components/analytics/ComplexityTrendChart";
 import { TestTypeChart } from "@/components/analytics/TestTypeChart";
 import { PromptStrategyChart } from "@/components/analytics/PromptStrategyChart";
-import { PerformanceHeatmap } from "@/components/analytics/PerformanceHeatmap";
+import { PerformanceGroupedBarChart } from "@/components/analytics/PerformanceGroupedBarChart";
 import { DegradationCards } from "@/components/analytics/DegradationCards";
 import { CoverageFCGapChart } from "@/components/analytics/CoverageFCGapChart";
-import { MetricsExplanation } from "@/components/info/MetricsExplanation";
 import { useFilters } from "@/hooks/useFilters";
 import {
   filterTestSetMetrics,
@@ -24,11 +23,24 @@ import {
   aggregateByPrompt,
   transformToHeatmap,
   calculateDegradationMetrics,
+  calculateOutcomeMetrics,
+  aggregateO4ByLLMAndComplexity,
+  aggregateFCCoverageByLLMAndComplexity,
+  aggregateO4ByLLMAndPrompt,
+  aggregateFCByLLMAndPrompt,
+  aggregateO4ByLLMAndTestType,
 } from "@/lib/data/aggregate-metrics";
 import type { TestSetMetrics, TestCaseMetrics } from "@/types/metrics";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Database, ExternalLink } from "lucide-react";
+import { OutcomeSummaryCards } from "@/components/analytics/OutcomeSummaryCards";
+import { OutcomeStackedBarChart } from "@/components/charts/OutcomeStackedBarChart";
+import { OutcomeLLMComplexityChart } from "@/components/charts/OutcomeLLMComplexityChart";
+import { FCCoverageLLMComplexityChart } from "@/components/charts/FCCoverageLLMComplexityChart";
+import { OutcomeLLMPromptChart } from "@/components/charts/OutcomeLLMPromptChart";
+import { FCLLMPromptChart } from "@/components/charts/FCLLMPromptChart";
+import { OutcomeLLMTestTypeChart } from "@/components/charts/OutcomeLLMTestTypeChart";
 
 export default function Home() {
   const filters = useFilters();
@@ -99,6 +111,25 @@ export default function Home() {
     : aggregateByPrompt([], testCaseData);
   const heatmapData = transformToHeatmap(testCaseData);
   const degradationMetrics = calculateDegradationMetrics(complexityData);
+
+  // Calculate outcome metrics (O1-O4) for outcomes view
+  const isOutcomesView = filters.metricView === "outcomes";
+  const outcomeMetrics = isOutcomesView ? calculateOutcomeMetrics(testSetData) : [];
+  const outcomesO4ByLLMComplexity = isOutcomesView
+    ? aggregateO4ByLLMAndComplexity(testSetData)
+    : [];
+  const fcCoverageByLLMComplexity = isOutcomesView
+    ? aggregateFCCoverageByLLMAndComplexity(testCaseData)
+    : [];
+  const outcomesO4ByLLMPrompt = isOutcomesView
+    ? aggregateO4ByLLMAndPrompt(testSetData)
+    : [];
+  const fcByLLMPrompt = isOutcomesView
+    ? aggregateFCByLLMAndPrompt(testCaseData)
+    : [];
+  const outcomesO4ByLLMTestType = isOutcomesView
+    ? aggregateO4ByLLMAndTestType(testSetData)
+    : [];
 
   // Show loading state until component is mounted to prevent hydration mismatch
   if (!isMounted) {
@@ -221,9 +252,6 @@ export default function Home() {
       </div>
 
       <main className="max-w-7xl mx-auto p-8 space-y-6">
-        {/* Metrics Explanation */}
-        <MetricsExplanation metricView={filters.metricView} />
-
         {/* Loading State */}
         {loading && (
           <div className="flex items-center justify-center py-12">
@@ -269,7 +297,7 @@ export default function Home() {
         )}
 
         {/* Analytics View - Test Case Metrics */}
-        {!loading && !isTestSetView && (
+        {!loading && !isTestSetView && !isOutcomesView && (
           <div className="space-y-6">
             {/* Summary Cards */}
             <SummaryCards
@@ -306,8 +334,74 @@ export default function Home() {
             {/* Prompt Strategy Chart - FC% only */}
             <PromptStrategyChart data={promptData} metricView="test-case" />
 
-            {/* Performance Heatmap - FC% across LLM × Test Type */}
-            <PerformanceHeatmap data={heatmapData} />
+            {/* Performance Comparison - FC% across LLM × Test Type */}
+            <PerformanceGroupedBarChart data={heatmapData} />
+          </div>
+        )}
+
+        {/* Analytics View - Outcomes Metrics (O1-O4) */}
+        {!loading && isOutcomesView && (
+          <div className="space-y-6">
+            {/* Summary Cards showing O1-O4 distribution and FC% */}
+            <OutcomeSummaryCards data={testSetData} testCaseData={testCaseData} />
+
+            {/* Section Header: LLM Performance Comparison */}
+            <div className="pt-4">
+              <Card className="p-6 mb-6 border-cyan-500/20 bg-gradient-to-br from-cyan-950/20 to-transparent">
+                <p className="text-base text-foreground leading-relaxed">
+                  <span className="font-semibold text-cyan-400">How to interpret LLM performance:</span> Of all generated test suites, the left graph shows outcomes O1 to O4, of which O4 (valid suite) means they compile, run, and are semantically correct. Among these valid suites, the average functional correctness is shown in the right graph.
+                </p>
+              </Card>
+            </div>
+
+            {/* Paired: O1-O4 per LLM | FC% per LLM */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <OutcomeStackedBarChart data={outcomeMetrics} title="O1 to O4 classification" />
+              <LLMComparisonChart
+                data={combineMetricsByLLM([], testCaseData)}
+                title="Functional Correctness/Coverage"
+                viewMode="test-case"
+              />
+            </div>
+
+            {/* Section Header: Complexity Analysis */}
+            <div className="pt-8">
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                LLM × Complexity
+              </h2>
+            </div>
+
+            {/* Paired: O1-O4 by Complexity | FC% by Complexity */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <OutcomeLLMComplexityChart data={outcomesO4ByLLMComplexity} title="Valid test suite rates (O4)" />
+              <FCCoverageLLMComplexityChart data={fcCoverageByLLMComplexity} title="Functional correctness rates" />
+            </div>
+
+            {/* Section Header: LLM × Prompt Strategy */}
+            <div className="pt-8">
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                LLM × Prompt Strategy
+              </h2>
+            </div>
+
+            {/* Paired: O1-O4 by Prompt | FC% by Prompt */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <OutcomeLLMPromptChart data={outcomesO4ByLLMPrompt} />
+              <FCLLMPromptChart data={fcByLLMPrompt} />
+            </div>
+
+            {/* Section Header: LLM × Test Type */}
+            <div className="pt-8">
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                LLM × Test Type
+              </h2>
+            </div>
+
+            {/* Paired: O4 by LLM×TestType | FC% Comparison */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <OutcomeLLMTestTypeChart data={outcomesO4ByLLMTestType} />
+              <PerformanceGroupedBarChart data={transformToHeatmap(testCaseData)} />
+            </div>
           </div>
         )}
       </main>

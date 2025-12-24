@@ -66,6 +66,42 @@ export const METRIC_DEFINITIONS = {
   },
 } as const;
 
+// Outcome Metric Definitions (O1-O4) - Complete Partition
+export const OUTCOME_DEFINITIONS = {
+  O1: {
+    name: 'Fails to Compile',
+    description: 'Test suites that fail during compilation phase',
+    acronym: 'O1',
+    formula: '(total_expected - compiled) / total_expected × 100',
+  },
+  O2: {
+    name: 'Runtime Failure',
+    description: 'Compiles successfully but fails during execution',
+    acronym: 'O2',
+    formula: '(compiled - runtime_success) / total_expected × 100',
+  },
+  O3: {
+    name: 'Semantically Invalid',
+    description: 'Runs successfully but is semantically incorrect',
+    acronym: 'O3',
+    formula: '(runtime_success - semantically_valid) / total_expected × 100',
+  },
+  O4: {
+    name: 'Valid Suite',
+    description: 'Compiles, runs, and is semantically valid',
+    acronym: 'O4',
+    formula: 'semantically_valid / total_expected × 100',
+  },
+} as const;
+
+// Outcome Colors (O1-O4)
+export const OUTCOME_COLORS = {
+  O1: '#FF4D4F',  // Red
+  O2: '#FAAD14',  // Orange
+  O3: '#9254DE',  // Purple
+  O4: '#36CFC9',  // Teal
+} as const;
+
 // Aggregation Level Labels
 export const AGGREGATION_LEVELS = {
   llm: 'By LLM',
@@ -114,7 +150,7 @@ export const PERFORMANCE_COLORS = {
   CSR: '#FF4D4F',      // outcome.O1 (fails to compile - red)
   RSR: '#FAAD14',      // outcome.O2 (runtime failure - orange)
   SVR: '#9254DE',      // outcome.O3 (semantically invalid - purple)
-  FC: '#36CFC9',       // outcome.O4 (valid suite - teal)
+  FC: '#597EF7',       // Indigo/Blue - distinct from all outcome colors
   Coverage: '#73D13D', // model.qwenCoder (green - distinct from all others)
 } as const;
 

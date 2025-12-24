@@ -8,6 +8,10 @@ import type {
   HeatmapData,
   SummaryMetrics,
   DegradationMetrics,
+  OutcomeMetrics,
+  AggregatedOutcomesByComplexity,
+  AggregatedOutcomesByTestType,
+  AggregatedOutcomesByPrompt,
 } from '@/types/metrics';
 
 /**
@@ -46,6 +50,20 @@ export function calculateSummaryMetrics(
   );
   const avgCoverage = totalFCCases > 0 ? weightedCoverage / totalFCCases : 0;
 
+  // Calculate O1-O4 outcome metrics
+  const O1_count = totalExpected - totalCompiled;
+  const O2_count = totalCompiled - totalRuntimeSuccess;
+  const O3_count = totalRuntimeSuccess - totalSemanticallyValid;
+  const O4_count = totalSemanticallyValid;
+
+  const avgO1 = totalExpected > 0 ? (O1_count / totalExpected) * 100 : 0;
+  const avgO2 = totalExpected > 0 ? (O2_count / totalExpected) * 100 : 0;
+  const avgO3 = totalExpected > 0 ? (O3_count / totalExpected) * 100 : 0;
+  const avgO4 = totalExpected > 0 ? (O4_count / totalExpected) * 100 : 0;
+
+  const [normalizedO1, normalizedO2, normalizedO3, normalizedO4] =
+    normalizeToSum100(avgO1, avgO2, avgO3, avgO4);
+
   return {
     totalTests,
     uniqueProblems,
@@ -54,6 +72,10 @@ export function calculateSummaryMetrics(
     avgSVR,
     avgFC,
     avgCoverage,
+    avgO1: normalizedO1,
+    avgO2: normalizedO2,
+    avgO3: normalizedO3,
+    avgO4: normalizedO4,
   };
 }
 
@@ -436,4 +458,474 @@ export function calculateDegradationMetrics(
     coverageDrop,
     severity,
   };
+}
+
+/**
+ * Normalize four percentages to sum exactly to 100%
+ * Handles rounding errors by adjusting the largest value
+ */
+function normalizeToSum100(
+  v1: number,
+  v2: number,
+  v3: number,
+  v4: number
+): [number, number, number, number] {
+  // Round to 2 decimal places
+  const rounded = [
+    Math.round(v1 * 100) / 100,
+    Math.round(v2 * 100) / 100,
+    Math.round(v3 * 100) / 100,
+    Math.round(v4 * 100) / 100,
+  ];
+
+  const sum = rounded.reduce((acc, val) => acc + val, 0);
+  const diff = 100 - sum;
+
+  // If there's a rounding error, adjust the largest value
+  if (Math.abs(diff) > 0.01) {
+    const maxIndex = rounded.indexOf(Math.max(...rounded));
+    rounded[maxIndex] = Math.round((rounded[maxIndex] + diff) * 100) / 100;
+  }
+
+  return [rounded[0], rounded[1], rounded[2], rounded[3]];
+}
+
+/**
+ * Calculate O1-O4 outcome metrics from test set data
+ * O1-O4 form a complete partition (sum to 100%) with total_expected as denominator
+ *
+ * Formulas:
+ * - O1 = (total_expected - compiled) / total_expected × 100
+ * - O2 = (compiled - runtime_success) / total_expected × 100
+ * - O3 = (runtime_success - semantically_valid) / total_expected × 100
+ * - O4 = semantically_valid / total_expected × 100
+ */
+export function calculateOutcomeMetrics(
+  testSetData: TestSetMetrics[]
+): OutcomeMetrics[] {
+  // Group by LLM
+  const byLLM = new Map<string, TestSetMetrics[]>();
+  testSetData.forEach((row) => {
+    if (!byLLM.has(row.llm)) {
+      byLLM.set(row.llm, []);
+    }
+    byLLM.get(row.llm)!.push(row);
+  });
+
+  const outcomes: OutcomeMetrics[] = [];
+
+  byLLM.forEach((rows, llm) => {
+    // Sum counts across all rows for this LLM
+    const totalExpected = rows.reduce((sum, row) => sum + row.total_expected, 0);
+    const totalCompiled = rows.reduce((sum, row) => sum + row.compiled, 0);
+    const totalRuntimeSuccess = rows.reduce((sum, row) => sum + row.runtime_success, 0);
+    const totalSemanticallyValid = rows.reduce((sum, row) => sum + row.semantically_valid, 0);
+
+    // Calculate counts for each outcome
+    const O1_count = totalExpected - totalCompiled;
+    const O2_count = totalCompiled - totalRuntimeSuccess;
+    const O3_count = totalRuntimeSuccess - totalSemanticallyValid;
+    const O4_count = totalSemanticallyValid;
+
+    // Calculate percentages (all use total_expected as denominator)
+    const O1_percentage = totalExpected > 0 ? (O1_count / totalExpected) * 100 : 0;
+    const O2_percentage = totalExpected > 0 ? (O2_count / totalExpected) * 100 : 0;
+    const O3_percentage = totalExpected > 0 ? (O3_count / totalExpected) * 100 : 0;
+    const O4_percentage = totalExpected > 0 ? (O4_count / totalExpected) * 100 : 0;
+
+    const [normalizedO1, normalizedO2, normalizedO3, normalizedO4] =
+      normalizeToSum100(O1_percentage, O2_percentage, O3_percentage, O4_percentage);
+
+    outcomes.push({
+      llm,
+      total_expected: totalExpected,
+      O1_percentage: normalizedO1,
+      O2_percentage: normalizedO2,
+      O3_percentage: normalizedO3,
+      O4_percentage: normalizedO4,
+      O1_count,
+      O2_count,
+      O3_count,
+      O4_count,
+    });
+  });
+
+  // Sort by O4 (best to worst)
+  return outcomes.sort((a, b) => b.O4_percentage - a.O4_percentage);
+}
+
+/**
+ * Aggregate outcome metrics by complexity
+ * Always returns all three complexity levels (Easy, Moderate, Hard) with 0 values for missing data
+ */
+export function aggregateOutcomesByComplexity(
+  testSetData: TestSetMetrics[]
+): AggregatedOutcomesByComplexity[] {
+  const withComplexity = testSetData.filter((row) => 'complexity' in row);
+  const byComplexity = new Map<string, TestSetMetrics[]>();
+
+  withComplexity.forEach((row) => {
+    const complexity = 'complexity' in row ? row.complexity : '';
+    if (!byComplexity.has(complexity)) {
+      byComplexity.set(complexity, []);
+    }
+    byComplexity.get(complexity)!.push(row);
+  });
+
+  // Define all complexity levels to ensure complete line chart
+  const allComplexities = ['Easy', 'Moderate', 'Hard'];
+  const aggregated: AggregatedOutcomesByComplexity[] = [];
+
+  allComplexities.forEach((complexity) => {
+    const rows = byComplexity.get(complexity) || [];
+
+    if (rows.length > 0) {
+      // Calculate metrics from actual data
+      const totalExpected = rows.reduce((sum, row) => sum + row.total_expected, 0);
+      const totalCompiled = rows.reduce((sum, row) => sum + row.compiled, 0);
+      const totalRuntimeSuccess = rows.reduce((sum, row) => sum + row.runtime_success, 0);
+      const totalSemanticallyValid = rows.reduce((sum, row) => sum + row.semantically_valid, 0);
+
+      const O1_count = totalExpected - totalCompiled;
+      const O2_count = totalCompiled - totalRuntimeSuccess;
+      const O3_count = totalRuntimeSuccess - totalSemanticallyValid;
+      const O4_count = totalSemanticallyValid;
+
+      const O1_pct = totalExpected > 0 ? (O1_count / totalExpected) * 100 : 0;
+      const O2_pct = totalExpected > 0 ? (O2_count / totalExpected) * 100 : 0;
+      const O3_pct = totalExpected > 0 ? (O3_count / totalExpected) * 100 : 0;
+      const O4_pct = totalExpected > 0 ? (O4_count / totalExpected) * 100 : 0;
+
+      const [O1, O2, O3, O4] = normalizeToSum100(O1_pct, O2_pct, O3_pct, O4_pct);
+
+      aggregated.push({
+        complexity,
+        O1_percentage: O1,
+        O2_percentage: O2,
+        O3_percentage: O3,
+        O4_percentage: O4,
+        total_expected: totalExpected,
+      });
+    } else {
+      // Return zeros for missing complexity levels
+      aggregated.push({
+        complexity,
+        O1_percentage: 0,
+        O2_percentage: 0,
+        O3_percentage: 0,
+        O4_percentage: 0,
+        total_expected: 0,
+      });
+    }
+  });
+
+  // Already sorted by complexity order (Easy, Moderate, Hard)
+  return aggregated;
+}
+
+/**
+ * Aggregate outcome metrics by test type
+ */
+export function aggregateOutcomesByTestType(
+  testSetData: TestSetMetrics[]
+): AggregatedOutcomesByTestType[] {
+  const withTestType = testSetData.filter((row) => 'test_type' in row);
+  const byTestType = new Map<string, TestSetMetrics[]>();
+
+  withTestType.forEach((row) => {
+    const testType = 'test_type' in row ? row.test_type : '';
+    if (!byTestType.has(testType)) {
+      byTestType.set(testType, []);
+    }
+    byTestType.get(testType)!.push(row);
+  });
+
+  const aggregated: AggregatedOutcomesByTestType[] = [];
+
+  byTestType.forEach((rows, testType) => {
+    const totalExpected = rows.reduce((sum, row) => sum + row.total_expected, 0);
+    const totalCompiled = rows.reduce((sum, row) => sum + row.compiled, 0);
+    const totalRuntimeSuccess = rows.reduce((sum, row) => sum + row.runtime_success, 0);
+    const totalSemanticallyValid = rows.reduce((sum, row) => sum + row.semantically_valid, 0);
+
+    const O1_count = totalExpected - totalCompiled;
+    const O2_count = totalCompiled - totalRuntimeSuccess;
+    const O3_count = totalRuntimeSuccess - totalSemanticallyValid;
+    const O4_count = totalSemanticallyValid;
+
+    const O1_pct = totalExpected > 0 ? (O1_count / totalExpected) * 100 : 0;
+    const O2_pct = totalExpected > 0 ? (O2_count / totalExpected) * 100 : 0;
+    const O3_pct = totalExpected > 0 ? (O3_count / totalExpected) * 100 : 0;
+    const O4_pct = totalExpected > 0 ? (O4_count / totalExpected) * 100 : 0;
+
+    const [O1, O2, O3, O4] = normalizeToSum100(O1_pct, O2_pct, O3_pct, O4_pct);
+
+    aggregated.push({
+      test_type: testType,
+      O1_percentage: O1,
+      O2_percentage: O2,
+      O3_percentage: O3,
+      O4_percentage: O4,
+      total_expected: totalExpected,
+    });
+  });
+
+  // Sort by O4 percentage (best to worst)
+  return aggregated.sort((a, b) => b.O4_percentage - a.O4_percentage);
+}
+
+/**
+ * Aggregate outcome metrics by prompt strategy
+ */
+export function aggregateOutcomesByPrompt(
+  testSetData: TestSetMetrics[]
+): AggregatedOutcomesByPrompt[] {
+  const withPrompt = testSetData.filter((row) => 'prompt_type' in row);
+  const byPrompt = new Map<string, TestSetMetrics[]>();
+
+  withPrompt.forEach((row) => {
+    const promptType = 'prompt_type' in row ? row.prompt_type : '';
+    if (!byPrompt.has(promptType)) {
+      byPrompt.set(promptType, []);
+    }
+    byPrompt.get(promptType)!.push(row);
+  });
+
+  const aggregated: AggregatedOutcomesByPrompt[] = [];
+
+  byPrompt.forEach((rows, promptType) => {
+    const totalExpected = rows.reduce((sum, row) => sum + row.total_expected, 0);
+    const totalCompiled = rows.reduce((sum, row) => sum + row.compiled, 0);
+    const totalRuntimeSuccess = rows.reduce((sum, row) => sum + row.runtime_success, 0);
+    const totalSemanticallyValid = rows.reduce((sum, row) => sum + row.semantically_valid, 0);
+
+    const O1_count = totalExpected - totalCompiled;
+    const O2_count = totalCompiled - totalRuntimeSuccess;
+    const O3_count = totalRuntimeSuccess - totalSemanticallyValid;
+    const O4_count = totalSemanticallyValid;
+
+    const O1_pct = totalExpected > 0 ? (O1_count / totalExpected) * 100 : 0;
+    const O2_pct = totalExpected > 0 ? (O2_count / totalExpected) * 100 : 0;
+    const O3_pct = totalExpected > 0 ? (O3_count / totalExpected) * 100 : 0;
+    const O4_pct = totalExpected > 0 ? (O4_count / totalExpected) * 100 : 0;
+
+    const [O1, O2, O3, O4] = normalizeToSum100(O1_pct, O2_pct, O3_pct, O4_pct);
+
+    aggregated.push({
+      prompt_type: promptType,
+      O1_percentage: O1,
+      O2_percentage: O2,
+      O3_percentage: O3,
+      O4_percentage: O4,
+      total_expected: totalExpected,
+    });
+  });
+
+  // Sort by O4 percentage (best to worst)
+  return aggregated.sort((a, b) => b.O4_percentage - a.O4_percentage);
+}
+
+/**
+ * Aggregate O4 outcome metrics by LLM × Test Type
+ * For grouped bar visualization showing O4 (valid suite) performance
+ */
+export function aggregateO4ByLLMAndTestType(
+  testSetData: TestSetMetrics[]
+): Array<{llm: string; testType: string; O4_percentage: number; total_expected: number}> {
+  const withBoth = testSetData.filter((row) => 'test_type' in row);
+  const byLLMAndTestType = new Map<string, TestSetMetrics[]>();
+
+  withBoth.forEach((row) => {
+    const testType = 'test_type' in row ? row.test_type : '';
+    const key = `${row.llm}|||${testType}`;
+
+    if (!byLLMAndTestType.has(key)) {
+      byLLMAndTestType.set(key, []);
+    }
+    byLLMAndTestType.get(key)!.push(row);
+  });
+
+  const aggregated: Array<{llm: string; testType: string; O4_percentage: number; total_expected: number}> = [];
+
+  byLLMAndTestType.forEach((rows, key) => {
+    const [llm, testType] = key.split('|||');
+
+    const totalExpected = rows.reduce((sum, row) => sum + row.total_expected, 0);
+    const totalSemanticallyValid = rows.reduce((sum, row) => sum + row.semantically_valid, 0);
+
+    const O4_percentage = totalExpected > 0 ? (totalSemanticallyValid / totalExpected) * 100 : 0;
+
+    aggregated.push({
+      llm,
+      testType,
+      O4_percentage: Math.round(O4_percentage * 100) / 100,
+      total_expected: totalExpected,
+    });
+  });
+
+  return aggregated;
+}
+
+/**
+ * Aggregate O4 (valid suite) percentage by LLM and Complexity
+ */
+export function aggregateO4ByLLMAndComplexity(
+  testSetData: TestSetMetrics[]
+): Array<{llm: string; complexity: string; O4_percentage: number; total_expected: number}> {
+  const withBoth = testSetData.filter((row) => 'complexity' in row);
+  const byLLMAndComplexity = new Map<string, TestSetMetrics[]>();
+
+  withBoth.forEach((row) => {
+    const complexity = 'complexity' in row ? row.complexity : '';
+    const key = `${row.llm}|||${complexity}`;
+
+    if (!byLLMAndComplexity.has(key)) {
+      byLLMAndComplexity.set(key, []);
+    }
+    byLLMAndComplexity.get(key)!.push(row);
+  });
+
+  const aggregated: Array<{llm: string; complexity: string; O4_percentage: number; total_expected: number}> = [];
+
+  byLLMAndComplexity.forEach((rows, key) => {
+    const [llm, complexity] = key.split('|||');
+
+    const totalExpected = rows.reduce((sum, row) => sum + row.total_expected, 0);
+    const totalSemanticallyValid = rows.reduce((sum, row) => sum + row.semantically_valid, 0);
+
+    const O4_percentage = totalExpected > 0 ? (totalSemanticallyValid / totalExpected) * 100 : 0;
+
+    aggregated.push({
+      llm,
+      complexity,
+      O4_percentage: Math.round(O4_percentage * 100) / 100,
+      total_expected: totalExpected,
+    });
+  });
+
+  return aggregated;
+}
+
+/**
+ * Aggregate FC% and Coverage by LLM and Complexity
+ */
+export function aggregateFCCoverageByLLMAndComplexity(
+  testCaseData: TestCaseMetrics[]
+): Array<{llm: string; complexity: string; fc_percentage: number; avg_line_coverage: number}> {
+  const withBoth = testCaseData.filter((row) => 'complexity' in row);
+  const byLLMAndComplexity = new Map<string, TestCaseMetrics[]>();
+
+  withBoth.forEach((row) => {
+    const complexity = 'complexity' in row ? row.complexity : '';
+    const key = `${row.llm}|||${complexity}`;
+
+    if (!byLLMAndComplexity.has(key)) {
+      byLLMAndComplexity.set(key, []);
+    }
+    byLLMAndComplexity.get(key)!.push(row);
+  });
+
+  const aggregated: Array<{llm: string; complexity: string; fc_percentage: number; avg_line_coverage: number}> = [];
+
+  byLLMAndComplexity.forEach((rows, key) => {
+    const [llm, complexity] = key.split('|||');
+
+    const totalTestCases = rows.reduce((sum, row) => sum + row.total_test_cases, 0);
+    const totalFunctionallyCorrect = rows.reduce((sum, row) => sum + row.functionally_correct_cases, 0);
+    const fc_percentage = totalTestCases > 0 ? (totalFunctionallyCorrect / totalTestCases) * 100 : 0;
+
+    // Coverage is weighted average by functionally correct cases
+    const totalFCCases = rows.reduce((sum, row) => sum + row.functionally_correct_cases, 0);
+    const weightedCoverage = rows.reduce((sum, row) =>
+      sum + (row.avg_line_coverage * row.functionally_correct_cases), 0
+    );
+    const avg_line_coverage = totalFCCases > 0 ? weightedCoverage / totalFCCases : 0;
+
+    aggregated.push({
+      llm,
+      complexity,
+      fc_percentage: Math.round(fc_percentage * 100) / 100,
+      avg_line_coverage: Math.round(avg_line_coverage * 100) / 100,
+    });
+  });
+
+  return aggregated;
+}
+
+/**
+ * Aggregate O4 (valid suite) percentage by LLM and Prompt Strategy
+ */
+export function aggregateO4ByLLMAndPrompt(
+  testSetData: TestSetMetrics[]
+): Array<{llm: string; prompt_type: string; O4_percentage: number; total_expected: number}> {
+  const withBoth = testSetData.filter((row) => 'prompt_type' in row);
+  const byLLMAndPrompt = new Map<string, TestSetMetrics[]>();
+
+  withBoth.forEach((row) => {
+    const promptType = 'prompt_type' in row ? row.prompt_type : '';
+    const key = `${row.llm}|||${promptType}`;
+
+    if (!byLLMAndPrompt.has(key)) {
+      byLLMAndPrompt.set(key, []);
+    }
+    byLLMAndPrompt.get(key)!.push(row);
+  });
+
+  const aggregated: Array<{llm: string; prompt_type: string; O4_percentage: number; total_expected: number}> = [];
+
+  byLLMAndPrompt.forEach((rows, key) => {
+    const [llm, promptType] = key.split('|||');
+
+    const totalExpected = rows.reduce((sum, row) => sum + row.total_expected, 0);
+    const totalSemanticallyValid = rows.reduce((sum, row) => sum + row.semantically_valid, 0);
+
+    const O4_percentage = totalExpected > 0 ? (totalSemanticallyValid / totalExpected) * 100 : 0;
+
+    aggregated.push({
+      llm,
+      prompt_type: promptType,
+      O4_percentage: Math.round(O4_percentage * 100) / 100,
+      total_expected: totalExpected,
+    });
+  });
+
+  return aggregated;
+}
+
+/**
+ * Aggregate FC% by LLM and Prompt Strategy
+ */
+export function aggregateFCByLLMAndPrompt(
+  testCaseData: TestCaseMetrics[]
+): Array<{llm: string; prompt_type: string; fc_percentage: number}> {
+  const withBoth = testCaseData.filter((row) => 'prompt_type' in row);
+  const byLLMAndPrompt = new Map<string, TestCaseMetrics[]>();
+
+  withBoth.forEach((row) => {
+    const promptType = 'prompt_type' in row ? row.prompt_type : '';
+    const key = `${row.llm}|||${promptType}`;
+
+    if (!byLLMAndPrompt.has(key)) {
+      byLLMAndPrompt.set(key, []);
+    }
+    byLLMAndPrompt.get(key)!.push(row);
+  });
+
+  const aggregated: Array<{llm: string; prompt_type: string; fc_percentage: number}> = [];
+
+  byLLMAndPrompt.forEach((rows, key) => {
+    const [llm, promptType] = key.split('|||');
+
+    const totalTestCases = rows.reduce((sum, row) => sum + row.total_test_cases, 0);
+    const totalFunctionallyCorrect = rows.reduce((sum, row) => sum + row.functionally_correct_cases, 0);
+    const fc_percentage = totalTestCases > 0 ? (totalFunctionallyCorrect / totalTestCases) * 100 : 0;
+
+    aggregated.push({
+      llm,
+      prompt_type: promptType,
+      fc_percentage: Math.round(fc_percentage * 100) / 100,
+    });
+  });
+
+  return aggregated;
 }

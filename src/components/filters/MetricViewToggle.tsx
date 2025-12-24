@@ -14,9 +14,10 @@ export function MetricViewToggle() {
         onValueChange={(value) => setMetricView(value as MetricView)}
         className="w-full max-w-md"
       >
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="test-set">Test Set Metrics</TabsTrigger>
-          <TabsTrigger value="test-case">Test Case Metrics</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="test-set">Test Set</TabsTrigger>
+          <TabsTrigger value="test-case">Test Case</TabsTrigger>
+          <TabsTrigger value="outcomes">Outcomes</TabsTrigger>
         </TabsList>
       </Tabs>
     </div>
