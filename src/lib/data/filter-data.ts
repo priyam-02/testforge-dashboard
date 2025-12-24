@@ -72,7 +72,7 @@ export function filterTestCaseMetrics(
  * (Complexity, Test Type, Prompt Strategy) have access to all dimensions they need.
  * Client-side filtering is then applied to the full dataset.
  */
-export function determineAggregationLevel(filters: FilterState):
+export function determineAggregationLevel():
   'llm' | 'llm_prompt' | 'llm_test' | 'llm_prompt_comp' | 'llm_prompt_test' | 'full_config' {
 
   // Always load full_config for Analytics view

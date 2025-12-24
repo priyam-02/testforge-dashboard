@@ -1,15 +1,13 @@
 'use client';
 
 import { Card } from '@/components/ui/card';
-import { Info, ArrowRight } from 'lucide-react';
-import type { SummaryMetrics } from '@/types/metrics';
+import { Info } from 'lucide-react';
 
 interface MetricsExplanationProps {
   metricView: 'test-set' | 'test-case' | 'outcomes';
-  summaryMetrics?: SummaryMetrics;
 }
 
-export function MetricsExplanation({ metricView, summaryMetrics }: MetricsExplanationProps) {
+export function MetricsExplanation({ metricView }: MetricsExplanationProps) {
   const isTestSet = metricView === 'test-set';
   const isOutcomes = metricView === 'outcomes';
 

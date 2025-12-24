@@ -9,8 +9,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  Area,
-  ComposedChart,
 } from 'recharts';
 import { Card } from '@/components/ui/card';
 
@@ -34,7 +32,7 @@ export function OutcomeLLMPromptChart({
   const uniqueLLMs = Array.from(new Set(data.map((d) => d.llm))).sort();
 
   // Group data by prompt type
-  const promptGroups = new Map<string, any>();
+  const promptGroups = new Map<string, Record<string, string | number>>();
 
   data.forEach((point) => {
     const promptLabel = point.prompt_type === 'zero_shot' ? 'Zero-Shot' :

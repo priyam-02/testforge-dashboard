@@ -11,7 +11,6 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { Card } from '@/components/ui/card';
-import { OUTCOME_COLORS } from '@/config/constants';
 import type { AggregatedOutcomesByPrompt } from '@/types/metrics';
 
 interface OutcomePromptStrategyChartProps {
@@ -39,7 +38,7 @@ export function OutcomePromptStrategyChart({
   );
 
   const chartData = outcomes.map((outcome) => {
-    const row: any = { outcome: outcome.label };
+    const row: Record<string, string | number> = { outcome: outcome.label };
 
     data.forEach((promptData) => {
       const promptLabel = promptData.prompt_type === 'zero_shot' ? 'Zero-Shot' :

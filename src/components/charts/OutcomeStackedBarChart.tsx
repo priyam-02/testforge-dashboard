@@ -35,7 +35,7 @@ export function OutcomeStackedBarChart({
 
 
   // Custom tooltip to show percentages and counts
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ dataKey: string; value: number; color: string; payload: { total: number; O1: number; O2: number; O3: number; O4: number } }>; label?: string }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
@@ -45,7 +45,7 @@ export function OutcomeStackedBarChart({
             Total: {data.total.toLocaleString()} test suites
           </p>
           <div className="space-y-1">
-            {payload.map((entry: any) => (
+            {payload.map((entry) => (
               <div key={entry.dataKey} className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
                   <div
