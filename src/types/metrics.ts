@@ -142,6 +142,10 @@ export interface AggregatedByComplexity {
   svr_percentage: number;
   fc_percentage: number;
   avg_line_coverage: number;
+  O1_percentage: number;
+  O2_percentage: number;
+  O3_percentage: number;
+  O4_percentage: number;
 }
 
 // Aggregated by test type
@@ -152,6 +156,10 @@ export interface AggregatedByTestType {
   svr_percentage: number;
   fc_percentage: number;
   avg_line_coverage: number;
+  O1_percentage: number;
+  O2_percentage: number;
+  O3_percentage: number;
+  O4_percentage: number;
 }
 
 // Aggregated by prompt
@@ -162,6 +170,10 @@ export interface AggregatedByPrompt {
   svr_percentage: number;
   fc_percentage: number;
   avg_line_coverage: number;
+  O1_percentage: number;
+  O2_percentage: number;
+  O3_percentage: number;
+  O4_percentage: number;
 }
 
 // Heatmap data

@@ -212,6 +212,19 @@ export function aggregateByComplexity(
     );
     const avgLineCoverage = totalFCCases > 0 ? weightedCoverage / totalFCCases : 0;
 
+    // Calculate O1-O4 outcome metrics
+    const O1_count = totalExpected - totalCompiled;
+    const O2_count = totalCompiled - totalRuntimeSuccess;
+    const O3_count = totalRuntimeSuccess - totalSemanticallyValid;
+    const O4_count = totalSemanticallyValid;
+
+    const O1_pct = totalExpected > 0 ? (O1_count / totalExpected) * 100 : 0;
+    const O2_pct = totalExpected > 0 ? (O2_count / totalExpected) * 100 : 0;
+    const O3_pct = totalExpected > 0 ? (O3_count / totalExpected) * 100 : 0;
+    const O4_pct = totalExpected > 0 ? (O4_count / totalExpected) * 100 : 0;
+
+    const [O1, O2, O3, O4] = normalizeToSum100(O1_pct, O2_pct, O3_pct, O4_pct);
+
     aggregated.push({
       complexity,
       csr_percentage: avgCSR,
@@ -219,6 +232,10 @@ export function aggregateByComplexity(
       svr_percentage: avgSVR,
       fc_percentage: avgFC,
       avg_line_coverage: avgLineCoverage,
+      O1_percentage: O1,
+      O2_percentage: O2,
+      O3_percentage: O3,
+      O4_percentage: O4,
     });
   });
 
@@ -288,6 +305,19 @@ export function aggregateByTestType(
     );
     const avgLineCoverage = totalFCCases > 0 ? weightedCoverage / totalFCCases : 0;
 
+    // Calculate O1-O4 outcome metrics
+    const O1_count = totalExpected - totalCompiled;
+    const O2_count = totalCompiled - totalRuntimeSuccess;
+    const O3_count = totalRuntimeSuccess - totalSemanticallyValid;
+    const O4_count = totalSemanticallyValid;
+
+    const O1_pct = totalExpected > 0 ? (O1_count / totalExpected) * 100 : 0;
+    const O2_pct = totalExpected > 0 ? (O2_count / totalExpected) * 100 : 0;
+    const O3_pct = totalExpected > 0 ? (O3_count / totalExpected) * 100 : 0;
+    const O4_pct = totalExpected > 0 ? (O4_count / totalExpected) * 100 : 0;
+
+    const [O1, O2, O3, O4] = normalizeToSum100(O1_pct, O2_pct, O3_pct, O4_pct);
+
     aggregated.push({
       test_type: testType,
       csr_percentage: avgCSR,
@@ -295,6 +325,10 @@ export function aggregateByTestType(
       svr_percentage: avgSVR,
       fc_percentage: avgFC,
       avg_line_coverage: avgLineCoverage,
+      O1_percentage: O1,
+      O2_percentage: O2,
+      O3_percentage: O3,
+      O4_percentage: O4,
     });
   });
 
@@ -363,6 +397,19 @@ export function aggregateByPrompt(
     );
     const avgLineCoverage = totalFCCases > 0 ? weightedCoverage / totalFCCases : 0;
 
+    // Calculate O1-O4 outcome metrics
+    const O1_count = totalExpected - totalCompiled;
+    const O2_count = totalCompiled - totalRuntimeSuccess;
+    const O3_count = totalRuntimeSuccess - totalSemanticallyValid;
+    const O4_count = totalSemanticallyValid;
+
+    const O1_pct = totalExpected > 0 ? (O1_count / totalExpected) * 100 : 0;
+    const O2_pct = totalExpected > 0 ? (O2_count / totalExpected) * 100 : 0;
+    const O3_pct = totalExpected > 0 ? (O3_count / totalExpected) * 100 : 0;
+    const O4_pct = totalExpected > 0 ? (O4_count / totalExpected) * 100 : 0;
+
+    const [O1, O2, O3, O4] = normalizeToSum100(O1_pct, O2_pct, O3_pct, O4_pct);
+
     aggregated.push({
       prompt_type: promptType,
       csr_percentage: avgCSR,
@@ -370,6 +417,10 @@ export function aggregateByPrompt(
       svr_percentage: avgSVR,
       fc_percentage: avgFC,
       avg_line_coverage: avgLineCoverage,
+      O1_percentage: O1,
+      O2_percentage: O2,
+      O3_percentage: O3,
+      O4_percentage: O4,
     });
   });
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+import { ChatBubble } from "@/components/chat/ChatBubble";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -41,6 +42,7 @@ export default function RootLayout({
         className={`${inter.variable} ${ibmPlexMono.variable} antialiased`}
       >
         {children}
+        <ChatBubble />
       </body>
     </html>
   );
