@@ -23,10 +23,10 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     >
       <div
         className={cn(
-          "max-w-[85%] rounded-lg px-4 py-2.5 text-sm",
+          "max-w-[80%] rounded-lg px-4 py-3 text-sm leading-relaxed",
           isUser
-            ? "bg-[#F7931E] text-white"
-            : "bg-[#101421] border border-[#222736] text-[#F7F8FF]"
+            ? "bg-[#F7931E] text-white shadow-lg shadow-[#F7931E]/20"
+            : "bg-[#101421] border border-[#222736] text-[#F7F8FF] shadow-md"
         )}
       >
         {isUser ? (
@@ -43,16 +43,16 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             </p>
           </div>
         ) : (
-          <div className="prose prose-invert prose-sm max-w-none">
+          <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                p: ({ children }) => <p className="mb-3 last:mb-0 leading-relaxed">{children}</p>,
                 strong: ({ children }) => <strong className="font-semibold text-[#F7931E]">{children}</strong>,
-                ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
-                ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
-                li: ({ children }) => <li className="text-[#F7F8FF]">{children}</li>,
-                code: ({ children }) => <code className="bg-[#050711] px-1.5 py-0.5 rounded text-[#F7931E]">{children}</code>,
+                ul: ({ children }) => <ul className="list-disc pl-5 mb-3 space-y-1.5">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal pl-5 mb-3 space-y-1.5">{children}</ol>,
+                li: ({ children }) => <li className="text-[#F7F8FF] leading-relaxed">{children}</li>,
+                code: ({ children }) => <code className="bg-[#050711] px-1.5 py-0.5 rounded text-[#F7931E] text-xs font-mono">{children}</code>,
                 table: ({ children }) => (
                   <table className="w-full border-collapse border border-[#222736] my-3 text-sm">
                     {children}

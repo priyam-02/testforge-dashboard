@@ -26,7 +26,7 @@ export function ChatMessages() {
 
   return (
     <div
-      className="flex-1 overflow-y-auto p-4 space-y-3"
+      className="flex-1 overflow-y-auto p-4 space-y-4"
       onWheel={(e) => {
         // Stop scroll propagation when scrolling messages
         e.stopPropagation();

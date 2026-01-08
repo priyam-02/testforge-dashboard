@@ -490,7 +490,96 @@ export function getFilteredMetrics(
 }
 
 /**
+ * Universal query function with semantic parameter extraction
+ * Replaces 8 specialized functions with 1 flexible interface
+ *
+ * @param testSetData - Test set metrics
+ * @param testCaseData - Test case metrics
+ * @param params - Query parameters with semantic structure
+ * @param params.group_by - Dimensions to group/compare by (e.g., ["llm"], ["prompt"])
+ * @param params.filter - Optional filters to narrow results
+ * @param params.filter.llms - Filter to specific LLMs
+ * @param params.filter.prompt - Filter to specific prompt strategy
+ * @param params.filter.complexity - Filter to specific complexity level
+ * @param params.filter.test_type - Filter to specific test type
+ * @param params.include_outcomes - Include O1-O4 outcome metrics (default: true)
+ *
+ * @example
+ * // Compare prompts for Llama3.3:70b
+ * queryMetrics(data, caseData, {
+ *   group_by: ["prompt"],
+ *   filter: { llms: ["Llama3.3:70b"] }
+ * })
+ *
+ * @example
+ * // Compare all LLMs (no filter)
+ * queryMetrics(data, caseData, {
+ *   group_by: ["llm"]
+ * })
+ */
+export function queryMetrics(
+  testSetData: TestSetMetrics[],
+  testCaseData: TestCaseMetrics[],
+  params: {
+    group_by: string[];
+    filter?: {
+      llms?: LLMType[];
+      prompt?: PromptType;
+      complexity?: Complexity;
+      test_type?: TestType;
+    };
+    include_outcomes?: boolean;
+  }
+): unknown {
+  // Normalize group_by to single primary dimension (support for future multi-dimensional grouping)
+  const primaryDimension = params.group_by[0];
+
+  // Extract filters (explicit semantics - no "omit means all")
+  const filters = {
+    llms: params.filter?.llms,
+    promptStrategy: params.filter?.prompt,
+    complexity: params.filter?.complexity,
+    testType: params.filter?.test_type,
+  };
+
+  // Route to appropriate aggregation function based on primary dimension
+  switch (primaryDimension) {
+    case 'llm':
+      // Group by LLM - returns comparison of LLM performance
+      return getComprehensiveComparison(testSetData, testCaseData, filters);
+
+    case 'prompt':
+      // Group by prompt strategy - returns comparison across prompts
+      return compareByPrompt(testSetData, testCaseData, {
+        llms: filters.llms,
+        complexity: filters.complexity,
+        testType: filters.testType,
+      });
+
+    case 'complexity':
+      // Group by complexity level - returns comparison across Easy/Moderate/Hard
+      return compareByComplexity(testSetData, testCaseData, {
+        llms: filters.llms,
+        promptStrategy: filters.promptStrategy,
+        testType: filters.testType,
+      });
+
+    case 'test_type':
+      // Group by test type - returns comparison across standard/boundary/mix
+      return compareByTestType(testSetData, testCaseData, {
+        llms: filters.llms,
+        promptStrategy: filters.promptStrategy,
+        complexity: filters.complexity,
+      });
+
+    default:
+      throw new Error(`Unknown group_by dimension: ${primaryDimension}. Valid options: llm, prompt, complexity, test_type`);
+  }
+}
+
+/**
  * Execute a data query based on query name and parameters
+ * @deprecated Use queryMetrics for new code. This function is kept for backward compatibility during transition.
  */
 export function executeQuery(
   queryName: string,

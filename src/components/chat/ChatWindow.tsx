@@ -35,8 +35,8 @@ export function ChatWindow() {
     bounds: {
       left: 0,
       top: 0,
-      right: typeof window !== 'undefined' ? window.innerWidth - 400 : 0,
-      bottom: typeof window !== 'undefined' ? window.innerHeight - 600 : 0,
+      right: typeof window !== 'undefined' ? window.innerWidth - 480 : 0,
+      bottom: typeof window !== 'undefined' ? window.innerHeight - 700 : 0,
     },
     onDragEnd: (pos) => {
       // Save position to store when drag ends
@@ -121,7 +121,7 @@ export function ChatWindow() {
         }}
         className={cn(
           "fixed z-100 backdrop-blur-xl border-[#222736] transition-all duration-300 flex flex-col",
-          "w-[400px] h-[600px]",
+          "w-[480px] h-[700px]",
           isDragging && "select-none",
           !isDragging && "shadow-xl"
         )}

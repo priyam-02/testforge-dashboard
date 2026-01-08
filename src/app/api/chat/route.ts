@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
 import type { ChatCompletionMessageToolCall } from "groq-sdk/resources/chat/completions";
 import { loadTestSetMetrics, loadTestCaseMetrics } from "@/lib/data/load-csv";
-import { executeQuery } from "@/lib/chat/data-queries";
+import { queryMetrics } from "@/lib/chat/data-queries";
 import { getFunctionCallingPrompt, getAnalysisPrompt } from "@/lib/chat/prompts";
 import type { FilterState } from "@/types/metrics";
 import { z } from "zod";
@@ -19,7 +19,7 @@ const chatRequestSchema = z.object({
       role: z.enum(['user', 'assistant']),
       content: z.string().min(1).max(4000), // Max 4K chars per message
     })
-  ).min(1).max(50), // Max 50 messages in history (we only use last 5 for Stage 1)
+  ).min(1).max(50), // Max 50 messages in history (we only use last message - both stages are stateless)
   context: z.object({
     sourceLanguage: z.enum(['Java']).nullable(),
     llm: z.enum(['Llama3.3:70b', 'Qwen2.5-coder:14b', 'Qwen3:4b', 'Qwen3:32b']).nullable(),
@@ -32,309 +32,67 @@ const chatRequestSchema = z.object({
 
 type ChatRequest = z.infer<typeof chatRequestSchema>;
 
-// Zod validation schemas for function results
-const comparePromptsSchema = z.array(z.object({
-  prompt_type: z.string(),
-  fc_percentage: z.number().min(0).max(100),
-  O4_percentage: z.number().min(0).max(100),
-  O1_percentage: z.number().min(0).max(100).optional(),
-  O2_percentage: z.number().min(0).max(100).optional(),
-  O3_percentage: z.number().min(0).max(100).optional(),
-  csr_percentage: z.number().optional(),
-  rsr_percentage: z.number().optional(),
-  svr_percentage: z.number().optional(),
-  avg_line_coverage: z.number().optional(),
-}));
-
-const compareComplexitySchema = z.array(z.object({
-  complexity: z.string(),
-  fc_percentage: z.number().min(0).max(100),
-  O4_percentage: z.number().min(0).max(100),
-  O1_percentage: z.number().min(0).max(100).optional(),
-  O2_percentage: z.number().min(0).max(100).optional(),
-  O3_percentage: z.number().min(0).max(100).optional(),
-  csr_percentage: z.number().optional(),
-  rsr_percentage: z.number().optional(),
-  svr_percentage: z.number().optional(),
-  avg_line_coverage: z.number().optional(),
-}));
-
-const compareTestTypeSchema = z.array(z.object({
-  test_type: z.string(),
-  fc_percentage: z.number().min(0).max(100),
-  O4_percentage: z.number().min(0).max(100),
-  O1_percentage: z.number().min(0).max(100).optional(),
-  O2_percentage: z.number().min(0).max(100).optional(),
-  O3_percentage: z.number().min(0).max(100).optional(),
-  csr_percentage: z.number().optional(),
-  rsr_percentage: z.number().optional(),
-  svr_percentage: z.number().optional(),
-  avg_line_coverage: z.number().optional(),
-}));
-
-const metricsByLLMSchema = z.array(z.object({
-  llm: z.string(),
-  fc_percentage: z.number().min(0).max(100),
-  avg_line_coverage: z.number().min(0).max(100),
-}));
-
-const outcomeMetricsSchema = z.array(z.object({
-  llm: z.string(),
-  O1_percentage: z.number().min(0).max(100),
-  O2_percentage: z.number().min(0).max(100),
-  O3_percentage: z.number().min(0).max(100),
-  O4_percentage: z.number().min(0).max(100),
-  total_expected: z.number(),
-}));
-
-const comprehensiveComparisonSchema = z.array(z.object({
-  llm: z.string(),
-  fc_percentage: z.number().min(0).max(100),
-  avg_line_coverage: z.number().min(0).max(100),
-  O1_percentage: z.number().min(0).max(100),
-  O2_percentage: z.number().min(0).max(100),
-  O3_percentage: z.number().min(0).max(100),
-  O4_percentage: z.number().min(0).max(100),
-  total_expected: z.number(),
-}));
-
-// Define function declarations for Groq (OpenAI-compatible format)
+// Define function declaration for Groq (OpenAI-compatible format)
+// Unified query interface replaces 8 specialized functions with 1 semantic extraction approach
 const tools = [
   {
     type: "function" as const,
     function: {
-      name: "get_metrics_by_llm",
+      name: "query_metrics",
       description:
-        "Get functional correctness (FC) and coverage values by LLM. REQUIRED for: 'Which is best?', 'Compare performance', 'Interesting observations', 'Overall analysis'. Use this FIRST to get FC values - the deciding factor for performance evaluation. Supports filtering by prompt strategy, complexity, and test type.",
+        "Universal metrics query with semantic parameter extraction. Use this for ANY question about LLM test generation metrics. Extract what dimension to compare (group_by) and what filters to apply from the user's question.",
       parameters: {
         type: "object",
+        required: ["group_by"],
         properties: {
-          llms: {
+          group_by: {
             type: "array",
             description:
-              'Optional array of LLM names to filter (e.g., ["Llama3.3:70b", "Qwen2.5-coder:14b"]). If omitted, returns data for all LLMs.',
+              "Dimension(s) to group/compare by. Extract from user question: 'Which LLM is best?' → ['llm'], 'Best prompt for Llama?' → ['prompt'], 'How does complexity affect results?' → ['complexity'], 'Are boundary tests harder?' → ['test_type']",
             items: {
               type: "string",
+              enum: ["llm", "prompt", "complexity", "test_type"],
             },
           },
-          promptStrategy: {
-            type: "string",
-            description: "Optional prompt strategy to filter (e.g., 'zero_shot', 'few_shot', 'chain_of_thought')",
-          },
-          complexity: {
-            type: "string",
-            description: "Optional complexity level to filter (e.g., 'Easy', 'Moderate', 'Hard')",
-          },
-          testType: {
-            type: "string",
-            description: "Optional test type to filter (e.g., 'standard', 'boundary', 'mix')",
-          },
-        },
-      },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_outcome_metrics",
-      description:
-        "Get O1-O4 outcome percentages by LLM. O4 is the semantic validity rate. REQUIRED for: 'Interesting observations', 'Overall analysis', performance comparisons. Use this SECOND (after get_metrics_by_llm) to get O4 values for context. Supports filtering by LLMs, prompt strategy, complexity, and test type.",
-      parameters: {
-        type: "object",
-        properties: {
-          llms: {
-            type: "array",
-            description: "Optional array of LLM names to filter (e.g., ['Llama3.3:70b', 'Qwen3:32b'])",
-            items: {
-              type: "string",
+          filter: {
+            type: "object",
+            description:
+              "Optional filters to narrow results. Only include filters explicitly mentioned in the question. If no filter mentioned, omit entirely.",
+            properties: {
+              llms: {
+                type: "array",
+                description:
+                  'Specific LLM names to include (e.g., ["Llama3.3:70b"]). Extract from questions like "for Llama", "with Qwen", "Llama3.3:70b performance".',
+                items: {
+                  type: "string",
+                  enum: ["Llama3.3:70b", "Qwen2.5-coder:14b", "Qwen3:4b", "Qwen3:32b"],
+                },
+              },
+              prompt: {
+                type: "string",
+                description:
+                  'Specific prompt strategy (e.g., "zero_shot"). Extract from questions like "with zero-shot", "using few-shot", "chain-of-thought performance".',
+                enum: ["zero_shot", "few_shot", "chain_of_thought"],
+              },
+              complexity: {
+                type: "string",
+                description:
+                  'Specific complexity level (e.g., "Hard"). Extract from questions like "on hard problems", "for easy tasks", "moderate difficulty".',
+                enum: ["Easy", "Moderate", "Hard"],
+              },
+              test_type: {
+                type: "string",
+                description:
+                  'Specific test type (e.g., "boundary"). Extract from questions like "boundary tests", "standard test cases", "mix test type".',
+                enum: ["standard", "boundary", "mix"],
+              },
             },
           },
-          promptStrategy: {
-            type: "string",
-            description: "Optional prompt strategy to filter (e.g., 'zero_shot', 'few_shot', 'chain_of_thought')",
-          },
-          complexity: {
-            type: "string",
-            description: "Optional complexity level to filter (e.g., 'Easy', 'Moderate', 'Hard')",
-          },
-          testType: {
-            type: "string",
-            description: "Optional test type to filter (e.g., 'standard', 'boundary', 'mix')",
-          },
-        },
-      },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "compare_complexity",
-      description:
-        "Compare metrics across complexity levels (Easy, Moderate, Hard). Supports filtering by LLMs, prompt strategy, and test type.",
-      parameters: {
-        type: "object",
-        properties: {
-          llms: {
-            type: "array",
-            description: "Optional array of LLM names to filter (e.g., ['Llama3.3:70b', 'Qwen3:32b'])",
-            items: {
-              type: "string",
-            },
-          },
-          promptStrategy: {
-            type: "string",
-            description: "Optional prompt strategy to filter (e.g., 'zero_shot', 'few_shot', 'chain_of_thought')",
-          },
-          testType: {
-            type: "string",
-            description: "Optional test type to filter (e.g., 'standard', 'boundary', 'mix')",
-          },
-        },
-      },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "compare_test_type",
-      description:
-        "Compare metrics across test types (standard, boundary, mix). Supports filtering by LLMs, prompt strategy, and complexity.",
-      parameters: {
-        type: "object",
-        properties: {
-          llms: {
-            type: "array",
-            description: "Optional array of LLM names to filter (e.g., ['Llama3.3:70b', 'Qwen3:32b'])",
-            items: {
-              type: "string",
-            },
-          },
-          promptStrategy: {
-            type: "string",
-            description: "Optional prompt strategy to filter (e.g., 'zero_shot', 'few_shot', 'chain_of_thought')",
-          },
-          complexity: {
-            type: "string",
-            description: "Optional complexity level to filter (e.g., 'Easy', 'Moderate', 'Hard')",
-          },
-        },
-      },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "compare_prompts",
-      description:
-        "Compare prompt strategy effectiveness (zero_shot, few_shot, chain_of_thought). Supports filtering by LLMs, complexity, and test type.",
-      parameters: {
-        type: "object",
-        properties: {
-          llms: {
-            type: "array",
-            description: "Optional array of LLM names to filter (e.g., ['Llama3.3:70b', 'Qwen3:32b'])",
-            items: {
-              type: "string",
-            },
-          },
-          complexity: {
-            type: "string",
-            description: "Optional complexity level to filter (e.g., 'Easy', 'Moderate', 'Hard')",
-          },
-          testType: {
-            type: "string",
-            description: "Optional test type to filter (e.g., 'standard', 'boundary', 'mix')",
-          },
-        },
-      },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_summary_stats",
-      description: "Get overall summary statistics. Supports filtering by LLMs, prompt strategy, complexity, and test type.",
-      parameters: {
-        type: "object",
-        properties: {
-          llms: {
-            type: "array",
-            description: "Optional array of LLM names to filter (e.g., ['Llama3.3:70b', 'Qwen3:32b'])",
-            items: {
-              type: "string",
-            },
-          },
-          promptStrategy: {
-            type: "string",
-            description: "Optional prompt strategy to filter (e.g., 'zero_shot', 'few_shot', 'chain_of_thought')",
-          },
-          complexity: {
-            type: "string",
-            description: "Optional complexity level to filter (e.g., 'Easy', 'Moderate', 'Hard')",
-          },
-          testType: {
-            type: "string",
-            description: "Optional test type to filter (e.g., 'standard', 'boundary', 'mix')",
-          },
-        },
-      },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_specific_metrics",
-      description: "Get aggregated metrics for a specific filter combination (llm + prompt + complexity + test type). SAFE: Returns only aggregated summary, not raw data.",
-      parameters: {
-        type: "object",
-        properties: {
-          llm: {
-            type: "string",
-            description: "LLM name (e.g., 'Qwen3:32b', 'Llama3.3:70b')",
-          },
-          promptStrategy: {
-            type: "string",
-            description: "Prompt strategy (e.g., 'zero_shot', 'few_shot', 'chain_of_thought')",
-          },
-          complexity: {
-            type: "string",
-            description: "Problem complexity (e.g., 'Easy', 'Moderate', 'Hard')",
-          },
-          testType: {
-            type: "string",
-            description: "Test type (e.g., 'standard', 'boundary', 'mix')",
-          },
-        },
-      },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_comprehensive_comparison",
-      description:
-        "Get comprehensive LLM comparison including FC, Coverage, and O1-O4 outcomes. RECOMMENDED for: 'Which is best?', 'Compare all models', 'Interesting observations'. Returns complete picture in one call to reduce hallucination. Supports filtering by LLMs, prompt strategy, complexity, and test type.",
-      parameters: {
-        type: "object",
-        properties: {
-          llms: {
-            type: "array",
-            description: "Optional array of LLM names to filter (e.g., ['Llama3.3:70b', 'Qwen3:32b'])",
-            items: {
-              type: "string",
-            },
-          },
-          promptStrategy: {
-            type: "string",
-            description: "Optional prompt strategy to filter (e.g., 'zero_shot', 'few_shot', 'chain_of_thought')",
-          },
-          complexity: {
-            type: "string",
-            description: "Optional complexity level to filter (e.g., 'Easy', 'Moderate', 'Hard')",
-          },
-          testType: {
-            type: "string",
-            description: "Optional test type to filter (e.g., 'standard', 'boundary', 'mix')",
+          include_outcomes: {
+            type: "boolean",
+            description:
+              "Include O1-O4 outcome metrics in results. Default: true. Set to false only if user explicitly asks to exclude outcome data.",
+            default: true,
           },
         },
       },
@@ -404,20 +162,21 @@ export async function POST(request: Request) {
       );
     }
 
-    // Build conversation history for Stage 1 (function calling)
+    // Build Stage 1 messages (function calling) - STATELESS
     // Note: Context is NOT passed to prompts - chatbot always analyzes complete dataset
+    // Stage 1 is stateless - only receives current question (no chat history)
     const functionCallingPrompt = getFunctionCallingPrompt();
 
-    // Convert messages to Groq format (last 5 messages)
+    // Convert to Groq format (current question only, no history)
     const groqMessages = [
       {
         role: "system" as const,
         content: functionCallingPrompt,
       },
-      ...messages.slice(-5).map((msg) => ({
-        role: msg.role as "user" | "assistant",
-        content: msg.content,
-      })),
+      {
+        role: "user" as const,
+        content: lastMessage.content,
+      },
     ];
 
     // First call: Let model decide if it needs to call functions
@@ -426,7 +185,7 @@ export async function POST(request: Request) {
       messages: groqMessages,
       tools: tools,
       tool_choice: "auto",
-      temperature: 0.7,
+      temperature: 0,  // Deterministic extraction - same question → same parameters
       max_tokens: 768,
     });
 
@@ -445,74 +204,21 @@ export async function POST(request: Request) {
       });
     }
 
-    // Allowlist of safe queries (prevents raw data dumping)
-    const SAFE_QUERIES = new Set([
-      'get_metrics_by_llm',
-      'get_outcome_metrics',
-      'compare_prompts',
-      'compare_test_type',
-      'compare_complexity',
-      'get_summary_stats',
-      'get_specific_metrics',
-      'get_comprehensive_comparison',
-    ]);
-
     // Maximum result size (prevent memory/token issues)
     const MAX_RESULT_SIZE = 100; // Max 100 rows per query result
 
     // Helper to truncate oversized results
-    function truncateQueryResult(result: unknown, queryName: string): unknown {
+    function truncateQueryResult(result: unknown): unknown {
       if (!Array.isArray(result)) {
         return result; // Not an array, can't truncate
       }
 
       if (result.length > MAX_RESULT_SIZE) {
-        console.warn(`⚠️ Query ${queryName} returned ${result.length} rows, truncating to ${MAX_RESULT_SIZE}`);
+        console.warn(`⚠️ Query returned ${result.length} rows, truncating to ${MAX_RESULT_SIZE}`);
         return result.slice(0, MAX_RESULT_SIZE);
       }
 
       return result;
-    }
-
-    /**
-     * Validates and auto-corrects function parameters from Stage 1 LLM
-     * Handles common mistakes like passing "all" as string or wrong types
-     */
-    function validateAndCorrectParams(
-      functionName: string,
-      params: Record<string, unknown>
-    ): Record<string, unknown> {
-      const corrected = { ...params };
-
-      // Auto-correct "all" string values → omit parameter
-      if (corrected.llms === "all" || corrected.llms === "All") {
-        delete corrected.llms;
-      }
-      if (corrected.promptStrategy === "all" || corrected.promptStrategy === "All") {
-        delete corrected.promptStrategy;
-      }
-      if (corrected.complexity === "all" || corrected.complexity === "All") {
-        delete corrected.complexity;
-      }
-      if (corrected.testType === "all" || corrected.testType === "All") {
-        delete corrected.testType;
-      }
-
-      // Ensure llms is array if provided (handle single string)
-      if (corrected.llms && !Array.isArray(corrected.llms)) {
-        corrected.llms = [corrected.llms];
-      }
-
-      // Log corrections for monitoring
-      if (JSON.stringify(params) !== JSON.stringify(corrected)) {
-        console.warn('⚠️ Auto-corrected function params:', {
-          function: functionName,
-          original: params,
-          corrected
-        });
-      }
-
-      return corrected;
     }
 
     // Execute all function calls with validation
@@ -520,8 +226,8 @@ export async function POST(request: Request) {
       (toolCall: ChatCompletionMessageToolCall) => {
         const functionName = toolCall.function.name;
 
-        // Security check: reject unknown/unsafe queries
-        if (!SAFE_QUERIES.has(functionName)) {
+        // Security check: only allow query_metrics
+        if (functionName !== 'query_metrics') {
           console.warn(`⚠️ SECURITY: Blocked unsafe query: ${functionName}`);
           console.warn(`⚠️ SECURITY: Tool call ID: ${toolCall.id}`);
           return {
@@ -533,63 +239,38 @@ export async function POST(request: Request) {
 
         const functionArgs = JSON.parse(toolCall.function.arguments);
 
-        // Validate and auto-correct parameters
-        const correctedArgs = validateAndCorrectParams(functionName, functionArgs);
-
-        // Execute the query with corrected parameters
-        let queryResult = executeQuery(
-          functionName,
-          correctedArgs,
+        // Execute the unified query function
+        let queryResult = queryMetrics(
           testSetData,
-          testCaseData
+          testCaseData,
+          functionArgs
         );
 
         // Truncate oversized results for safety
-        queryResult = truncateQueryResult(queryResult, functionName);
+        queryResult = truncateQueryResult(queryResult);
 
         // Log query execution for monitoring
-        console.log(`✓ Query executed: ${functionName}, result rows: ${Array.isArray(queryResult) ? queryResult.length : 'N/A'}`);
+        const resultSize = Array.isArray(queryResult) ? queryResult.length : 'single object';
+        console.log(`✓ Query executed: query_metrics`);
+        console.log(`  - group_by: ${JSON.stringify(functionArgs.group_by)}`);
+        console.log(`  - filter: ${JSON.stringify(functionArgs.filter || {})}`);
+        console.log(`  - result size: ${resultSize}`);
 
-        // Validate query result with Zod
-        try {
-          let validated = queryResult;
-          switch (functionName) {
-            case 'compare_prompts':
-              validated = comparePromptsSchema.parse(queryResult);
-              break;
-            case 'compare_complexity':
-              validated = compareComplexitySchema.parse(queryResult);
-              break;
-            case 'compare_test_type':
-              validated = compareTestTypeSchema.parse(queryResult);
-              break;
-            case 'get_metrics_by_llm':
-              validated = metricsByLLMSchema.parse(queryResult);
-              break;
-            case 'get_outcome_metrics':
-              validated = outcomeMetricsSchema.parse(queryResult);
-              break;
-            case 'get_comprehensive_comparison':
-              validated = comprehensiveComparisonSchema.parse(queryResult);
-              break;
-          }
-
-          console.log(`✓ Validation passed for ${functionName}`);
-
+        // Basic validation: ensure result is not null/undefined
+        if (queryResult === null || queryResult === undefined) {
+          console.error(`✗ Query returned null/undefined`);
           return {
             role: "tool" as const,
             tool_call_id: toolCall.id,
-            content: JSON.stringify(validated),
-          };
-        } catch (error) {
-          console.error(`✗ Validation failed for ${functionName}:`, error);
-          // Still return result but log the error for monitoring
-          return {
-            role: "tool" as const,
-            tool_call_id: toolCall.id,
-            content: JSON.stringify(queryResult),
+            content: JSON.stringify({ error: "Query returned no data" }),
           };
         }
+
+        return {
+          role: "tool" as const,
+          tool_call_id: toolCall.id,
+          content: JSON.stringify(queryResult),
+        };
       }
     );
 
@@ -621,7 +302,7 @@ export async function POST(request: Request) {
     // Use 70B model for accurate number interpretation and insightful analysis
     // Build new messages array with Stage 2 (analysis) prompt
     // Note: Context is NOT passed to prompts - chatbot always analyzes complete dataset
-    // Stage 2 is stateless - only receives current question + tool JSON (no conversation history)
+    // Both stages are stateless - only receive current question + tool JSON (no conversation history)
     const analysisPrompt = getAnalysisPrompt();
     const secondCompletion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",

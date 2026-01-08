@@ -7,38 +7,9 @@ import { useChat } from '@/hooks/useChat';
 import { useFilters } from '@/hooks/useFilters';
 import { cn } from '@/lib/utils';
 
-/**
- * Format filter context for display in chat header
- * Note: These filters are shown for user reference only - the chatbot analyzes ALL data
- */
-function formatFilterContext(filters: {
-  llm?: string | null;
-  promptStrategy?: string | null;
-  complexity?: string | null;
-  testType?: string | null;
-}): string {
-  const parts: string[] = [];
-
-  if (filters.llm) {
-    parts.push(`LLM: ${filters.llm}`);
-  }
-  if (filters.promptStrategy) {
-    parts.push(`Prompt: ${filters.promptStrategy}`);
-  }
-  if (filters.complexity) {
-    parts.push(`Complexity: ${filters.complexity}`);
-  }
-  if (filters.testType) {
-    parts.push(`Test Type: ${filters.testType}`);
-  }
-
-  return parts.length > 0 ? parts.join(', ') : 'No filters active (viewing all data)';
-}
-
 export function ChatHeader() {
   const { closeChat, clearHistory, resetPosition, messages } = useChat();
   const filters = useFilters();
-  const filterContext = formatFilterContext(filters);
 
   return (
     <div
@@ -115,17 +86,43 @@ export function ChatHeader() {
         </div>
       </div>
 
-      {/* Filter context chips */}
-      {filterContext !== 'No filters active (viewing all data)' && (
-        <div className="mt-2">
-          <Badge
-            variant="outline"
-            className="text-xs text-[#A6AEC8] border-[#222736]"
-          >
-            {filterContext}
-          </Badge>
+      {/* Filter context chips - horizontal scrollable */}
+      <div className="mt-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="flex gap-2 min-w-min">
+          {filters.llm && (
+            <Badge
+              variant="outline"
+              className="text-xs text-[#A6AEC8] border-[#222736] shrink-0"
+            >
+              LLM: {filters.llm}
+            </Badge>
+          )}
+          {filters.promptStrategy && (
+            <Badge
+              variant="outline"
+              className="text-xs text-[#A6AEC8] border-[#222736] shrink-0"
+            >
+              Prompt: {filters.promptStrategy}
+            </Badge>
+          )}
+          {filters.complexity && (
+            <Badge
+              variant="outline"
+              className="text-xs text-[#A6AEC8] border-[#222736] shrink-0"
+            >
+              Complexity: {filters.complexity}
+            </Badge>
+          )}
+          {filters.testType && (
+            <Badge
+              variant="outline"
+              className="text-xs text-[#A6AEC8] border-[#222736] shrink-0"
+            >
+              Test: {filters.testType}
+            </Badge>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

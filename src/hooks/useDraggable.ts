@@ -39,8 +39,8 @@ export function useDraggable({
 
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
-    const chatWidth = 400;
-    const chatHeight = 600;
+    const chatWidth = 480;
+    const chatHeight = 700;
 
     return {
       x: windowWidth - chatWidth - 24,   // 24px padding from right
@@ -129,8 +129,8 @@ export function useDraggable({
   useEffect(() => {
     const handleResize = () => {
       if (bounds && position) {
-        const maxX = window.innerWidth - 400;
-        const maxY = window.innerHeight - 600;
+        const maxX = window.innerWidth - 480;
+        const maxY = window.innerHeight - 700;
 
         if (position.x > maxX || position.y > maxY) {
           setPosition({
