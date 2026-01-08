@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFilters } from '@/hooks/useFilters';
@@ -65,12 +65,12 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
     }
   };
 
-  const handleSuggestionClick = (question: string) => {
+  const handleSuggestionClick = useCallback((question: string) => {
     if (!isLoading) {
       onSend(question);
       setExpandedCard(null); // Reset expansion after sending
     }
-  };
+  }, [isLoading, onSend]);
 
   // Keyboard shortcuts for quick-send
   useEffect(() => {
@@ -89,7 +89,7 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [suggestedQuestions, isLoading]);
+  }, [suggestedQuestions, isLoading, handleSuggestionClick]);
 
   return (
     <div className="border-t border-[#222736] p-4 space-y-2.5">
