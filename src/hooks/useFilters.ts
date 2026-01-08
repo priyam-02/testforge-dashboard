@@ -18,7 +18,7 @@ const initialState: FilterState = {
   promptStrategy: null,
   complexity: null,
   testType: null,
-  metricView: 'test-set',
+  metricView: 'outcomes',
 };
 
 export const useFilters = create<FilterStore>()(

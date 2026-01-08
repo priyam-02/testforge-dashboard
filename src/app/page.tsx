@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { FilterPanel } from "@/components/filters/FilterPanel";
-import { MetricViewToggle } from "@/components/filters/MetricViewToggle";
+// import { MetricViewToggle } from "@/components/filters/MetricViewToggle"; // Hidden - outcomes is default view
 import { SummaryCards } from "@/components/analytics/SummaryCards";
 import { LLMComparisonChart } from "@/components/analytics/LLMComparisonChart";
 import { ComplexityTrendChart } from "@/components/analytics/ComplexityTrendChart";
@@ -246,8 +246,8 @@ export default function Home() {
           {/* Filters */}
           <FilterPanel />
 
-          {/* Metric View Toggle */}
-          <MetricViewToggle />
+          {/* Metric View Toggle - Hidden, outcomes is default */}
+          {/* <MetricViewToggle /> */}
         </div>
       </div>
 
