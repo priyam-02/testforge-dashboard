@@ -25,7 +25,13 @@ export function ChatMessages() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+    <div
+      className="flex-1 overflow-y-auto p-4 space-y-3"
+      onWheel={(e) => {
+        // Stop scroll propagation when scrolling messages
+        e.stopPropagation();
+      }}
+    >
       {messages.map((message) => (
         <MessageBubble key={message.id} message={message} />
       ))}

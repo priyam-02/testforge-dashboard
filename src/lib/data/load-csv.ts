@@ -11,7 +11,15 @@ export type TestCaseAggregation = 'llm' | 'llm_prompt' | 'llm_test' | 'llm_promp
  * Handles: "Chain-of-Thought" → "chain_of_thought", "Few-Shot" → "few_shot", etc.
  */
 function normalizePromptType(value: string): string {
-  return value.toLowerCase().replace(/-/g, '_');
+  const normalized = value.toLowerCase().replace(/-/g, '_');
+
+  // Validation: warn if unexpected value
+  const validPrompts = ['zero_shot', 'few_shot', 'chain_of_thought'];
+  if (!validPrompts.includes(normalized)) {
+    console.warn(`⚠️ Unexpected prompt_type: "${value}" → "${normalized}"`);
+  }
+
+  return normalized;
 }
 
 /**
@@ -21,24 +29,65 @@ function normalizePromptType(value: string): string {
 function normalizeTestType(value: string): string {
   const normalized = value.toLowerCase();
   // Normalize "Mixed" to "mix" for consistency across files
-  return normalized === 'mixed' ? 'mix' : normalized;
+  const mapped = normalized === 'mixed' ? 'mix' : normalized;
+
+  // Validation: warn if unexpected value
+  const validTypes = ['standard', 'boundary', 'mix'];
+  if (!validTypes.includes(mapped)) {
+    console.warn(`⚠️ Unexpected test_type: "${value}" → "${mapped}"`);
+  }
+
+  return mapped;
+}
+
+/**
+ * Normalize complexity from any format to canonical Title-Case
+ * Handles: "easy" → "Easy", "MODERATE" → "Moderate", etc.
+ */
+function normalizeComplexity(value: string): string {
+  const normalized = value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+
+  // Validation: warn if unexpected value
+  const validComplexities = ['Easy', 'Moderate', 'Hard'];
+  if (!validComplexities.includes(normalized)) {
+    console.warn(`⚠️ Unexpected complexity: "${value}" → "${normalized}"`);
+  }
+
+  return normalized;
 }
 
 /**
  * Normalize a single row of metrics data to ensure consistent format
- * Applies normalization to prompt_type and test_type fields if present
+ * Applies normalization to prompt_type, test_type, and complexity fields if present
  */
 function normalizeMetricsRow(row: Record<string, unknown>): Record<string, unknown> {
   const normalized = { ...row };
+  let modified = false;
 
   // Normalize prompt_type if present (handles TSM Title-Case vs TCM snake_case)
   if ('prompt_type' in normalized && typeof normalized.prompt_type === 'string') {
+    const original = normalized.prompt_type;
     normalized.prompt_type = normalizePromptType(normalized.prompt_type);
+    if (original !== normalized.prompt_type) modified = true;
   }
 
   // Normalize test_type if present (handles TSM Title-Case vs TCM lowercase, and Mix/Mixed inconsistency)
   if ('test_type' in normalized && typeof normalized.test_type === 'string') {
+    const original = normalized.test_type;
     normalized.test_type = normalizeTestType(normalized.test_type);
+    if (original !== normalized.test_type) modified = true;
+  }
+
+  // Normalize complexity if present (handles case inconsistencies)
+  if ('complexity' in normalized && typeof normalized.complexity === 'string') {
+    const original = normalized.complexity;
+    normalized.complexity = normalizeComplexity(normalized.complexity);
+    if (original !== normalized.complexity) modified = true;
+  }
+
+  // Log normalizations in development only (not in production to avoid log spam)
+  if (modified && process.env.NODE_ENV === 'development') {
+    console.log('✓ Normalized CSV row');
   }
 
   return normalized;

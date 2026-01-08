@@ -53,6 +53,28 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                 ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
                 li: ({ children }) => <li className="text-[#F7F8FF]">{children}</li>,
                 code: ({ children }) => <code className="bg-[#050711] px-1.5 py-0.5 rounded text-[#F7931E]">{children}</code>,
+                table: ({ children }) => (
+                  <table className="w-full border-collapse border border-[#222736] my-3 text-sm">
+                    {children}
+                  </table>
+                ),
+                thead: ({ children }) => (
+                  <thead className="bg-[#050711]">{children}</thead>
+                ),
+                tbody: ({ children }) => <tbody>{children}</tbody>,
+                tr: ({ children }) => (
+                  <tr className="border-b border-[#222736]">{children}</tr>
+                ),
+                th: ({ children }) => (
+                  <th className="px-3 py-2 text-left font-semibold text-[#F7931E] border-r border-[#222736] last:border-r-0">
+                    {children}
+                  </th>
+                ),
+                td: ({ children }) => (
+                  <td className="px-3 py-2 text-[#F7F8FF] border-r border-[#222736] last:border-r-0">
+                    {children}
+                  </td>
+                ),
               }}
             >
               {message.content}

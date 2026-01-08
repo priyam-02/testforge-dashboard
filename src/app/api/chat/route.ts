@@ -3,7 +3,7 @@ import Groq from "groq-sdk";
 import type { ChatCompletionMessageToolCall } from "groq-sdk/resources/chat/completions";
 import { loadTestSetMetrics, loadTestCaseMetrics } from "@/lib/data/load-csv";
 import { executeQuery } from "@/lib/chat/data-queries";
-import { getSystemPrompt } from "@/lib/chat/prompts";
+import { getFunctionCallingPrompt, getAnalysisPrompt } from "@/lib/chat/prompts";
 import type { FilterState } from "@/types/metrics";
 import { z } from "zod";
 import { checkRateLimit as checkRateLimitLib, getClientIP } from "@/lib/rate-limit";
@@ -19,7 +19,7 @@ const chatRequestSchema = z.object({
       role: z.enum(['user', 'assistant']),
       content: z.string().min(1).max(4000), // Max 4K chars per message
     })
-  ).min(1).max(10), // Max 10 messages in history
+  ).min(1).max(50), // Max 50 messages in history (we only use last 5 for Stage 1)
   context: z.object({
     sourceLanguage: z.enum(['Java']).nullable(),
     llm: z.enum(['Llama3.3:70b', 'Qwen2.5-coder:14b', 'Qwen3:4b', 'Qwen3:32b']).nullable(),
@@ -87,6 +87,17 @@ const outcomeMetricsSchema = z.array(z.object({
   total_expected: z.number(),
 }));
 
+const comprehensiveComparisonSchema = z.array(z.object({
+  llm: z.string(),
+  fc_percentage: z.number().min(0).max(100),
+  avg_line_coverage: z.number().min(0).max(100),
+  O1_percentage: z.number().min(0).max(100),
+  O2_percentage: z.number().min(0).max(100),
+  O3_percentage: z.number().min(0).max(100),
+  O4_percentage: z.number().min(0).max(100),
+  total_expected: z.number(),
+}));
+
 // Define function declarations for Groq (OpenAI-compatible format)
 const tools = [
   {
@@ -94,7 +105,7 @@ const tools = [
     function: {
       name: "get_metrics_by_llm",
       description:
-        "Get functional correctness (FC) and coverage values by LLM. REQUIRED for: 'Which is best?', 'Compare performance', 'Interesting observations', 'Overall analysis'. Use this FIRST to get FC values - the deciding factor for performance evaluation.",
+        "Get functional correctness (FC) and coverage values by LLM. REQUIRED for: 'Which is best?', 'Compare performance', 'Interesting observations', 'Overall analysis'. Use this FIRST to get FC values - the deciding factor for performance evaluation. Supports filtering by prompt strategy, complexity, and test type.",
       parameters: {
         type: "object",
         properties: {
@@ -106,6 +117,18 @@ const tools = [
               type: "string",
             },
           },
+          promptStrategy: {
+            type: "string",
+            description: "Optional prompt strategy to filter (e.g., 'zero_shot', 'few_shot', 'chain_of_thought')",
+          },
+          complexity: {
+            type: "string",
+            description: "Optional complexity level to filter (e.g., 'Easy', 'Moderate', 'Hard')",
+          },
+          testType: {
+            type: "string",
+            description: "Optional test type to filter (e.g., 'standard', 'boundary', 'mix')",
+          },
         },
       },
     },
@@ -115,10 +138,30 @@ const tools = [
     function: {
       name: "get_outcome_metrics",
       description:
-        "Get O1-O4 outcome percentages by LLM. O4 is the semantic validity rate. REQUIRED for: 'Interesting observations', 'Overall analysis', performance comparisons. Use this SECOND (after get_metrics_by_llm) to get O4 values for context.",
+        "Get O1-O4 outcome percentages by LLM. O4 is the semantic validity rate. REQUIRED for: 'Interesting observations', 'Overall analysis', performance comparisons. Use this SECOND (after get_metrics_by_llm) to get O4 values for context. Supports filtering by LLMs, prompt strategy, complexity, and test type.",
       parameters: {
         type: "object",
-        properties: {},
+        properties: {
+          llms: {
+            type: "array",
+            description: "Optional array of LLM names to filter (e.g., ['Llama3.3:70b', 'Qwen3:32b'])",
+            items: {
+              type: "string",
+            },
+          },
+          promptStrategy: {
+            type: "string",
+            description: "Optional prompt strategy to filter (e.g., 'zero_shot', 'few_shot', 'chain_of_thought')",
+          },
+          complexity: {
+            type: "string",
+            description: "Optional complexity level to filter (e.g., 'Easy', 'Moderate', 'Hard')",
+          },
+          testType: {
+            type: "string",
+            description: "Optional test type to filter (e.g., 'standard', 'boundary', 'mix')",
+          },
+        },
       },
     },
   },
@@ -127,16 +170,24 @@ const tools = [
     function: {
       name: "compare_complexity",
       description:
-        "Compare metrics across complexity levels (Easy, Moderate, Hard) for specified LLMs.",
+        "Compare metrics across complexity levels (Easy, Moderate, Hard). Supports filtering by LLMs, prompt strategy, and test type.",
       parameters: {
         type: "object",
         properties: {
           llms: {
             type: "array",
-            description: "Optional array of LLM names to filter",
+            description: "Optional array of LLM names to filter (e.g., ['Llama3.3:70b', 'Qwen3:32b'])",
             items: {
               type: "string",
             },
+          },
+          promptStrategy: {
+            type: "string",
+            description: "Optional prompt strategy to filter (e.g., 'zero_shot', 'few_shot', 'chain_of_thought')",
+          },
+          testType: {
+            type: "string",
+            description: "Optional test type to filter (e.g., 'standard', 'boundary', 'mix')",
           },
         },
       },
@@ -147,16 +198,24 @@ const tools = [
     function: {
       name: "compare_test_type",
       description:
-        "Compare metrics across test types (standard, boundary, mixed) for specified LLMs.",
+        "Compare metrics across test types (standard, boundary, mix). Supports filtering by LLMs, prompt strategy, and complexity.",
       parameters: {
         type: "object",
         properties: {
           llms: {
             type: "array",
-            description: "Optional array of LLM names to filter",
+            description: "Optional array of LLM names to filter (e.g., ['Llama3.3:70b', 'Qwen3:32b'])",
             items: {
               type: "string",
             },
+          },
+          promptStrategy: {
+            type: "string",
+            description: "Optional prompt strategy to filter (e.g., 'zero_shot', 'few_shot', 'chain_of_thought')",
+          },
+          complexity: {
+            type: "string",
+            description: "Optional complexity level to filter (e.g., 'Easy', 'Moderate', 'Hard')",
           },
         },
       },
@@ -167,16 +226,24 @@ const tools = [
     function: {
       name: "compare_prompts",
       description:
-        "Compare prompt strategy effectiveness (zero_shot, few_shot, chain_of_thought) for specified LLMs.",
+        "Compare prompt strategy effectiveness (zero_shot, few_shot, chain_of_thought). Supports filtering by LLMs, complexity, and test type.",
       parameters: {
         type: "object",
         properties: {
           llms: {
             type: "array",
-            description: "Optional array of LLM names to filter",
+            description: "Optional array of LLM names to filter (e.g., ['Llama3.3:70b', 'Qwen3:32b'])",
             items: {
               type: "string",
             },
+          },
+          complexity: {
+            type: "string",
+            description: "Optional complexity level to filter (e.g., 'Easy', 'Moderate', 'Hard')",
+          },
+          testType: {
+            type: "string",
+            description: "Optional test type to filter (e.g., 'standard', 'boundary', 'mix')",
           },
         },
       },
@@ -186,37 +253,88 @@ const tools = [
     type: "function" as const,
     function: {
       name: "get_summary_stats",
-      description: "Get overall summary statistics across all data.",
+      description: "Get overall summary statistics. Supports filtering by LLMs, prompt strategy, complexity, and test type.",
       parameters: {
         type: "object",
-        properties: {},
+        properties: {
+          llms: {
+            type: "array",
+            description: "Optional array of LLM names to filter (e.g., ['Llama3.3:70b', 'Qwen3:32b'])",
+            items: {
+              type: "string",
+            },
+          },
+          promptStrategy: {
+            type: "string",
+            description: "Optional prompt strategy to filter (e.g., 'zero_shot', 'few_shot', 'chain_of_thought')",
+          },
+          complexity: {
+            type: "string",
+            description: "Optional complexity level to filter (e.g., 'Easy', 'Moderate', 'Hard')",
+          },
+          testType: {
+            type: "string",
+            description: "Optional test type to filter (e.g., 'standard', 'boundary', 'mix')",
+          },
+        },
       },
     },
   },
   {
     type: "function" as const,
     function: {
-      name: "get_filtered_metrics",
-      description: "Get raw metrics with specific filters applied.",
+      name: "get_specific_metrics",
+      description: "Get aggregated metrics for a specific filter combination (llm + prompt + complexity + test type). SAFE: Returns only aggregated summary, not raw data.",
       parameters: {
         type: "object",
         properties: {
           llm: {
             type: "string",
-            description: 'LLM name (e.g., "Llama3.3:70b")',
+            description: "LLM name (e.g., 'Qwen3:32b', 'Llama3.3:70b')",
           },
           promptStrategy: {
             type: "string",
-            description:
-              "Prompt strategy: zero_shot, few_shot, or chain_of_thought",
+            description: "Prompt strategy (e.g., 'zero_shot', 'few_shot', 'chain_of_thought')",
           },
           complexity: {
             type: "string",
-            description: "Complexity level: Easy, Moderate, or Hard",
+            description: "Problem complexity (e.g., 'Easy', 'Moderate', 'Hard')",
           },
           testType: {
             type: "string",
-            description: "Test type: standard, boundary, or mix",
+            description: "Test type (e.g., 'standard', 'boundary', 'mix')",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_comprehensive_comparison",
+      description:
+        "Get comprehensive LLM comparison including FC, Coverage, and O1-O4 outcomes. RECOMMENDED for: 'Which is best?', 'Compare all models', 'Interesting observations'. Returns complete picture in one call to reduce hallucination. Supports filtering by LLMs, prompt strategy, complexity, and test type.",
+      parameters: {
+        type: "object",
+        properties: {
+          llms: {
+            type: "array",
+            description: "Optional array of LLM names to filter (e.g., ['Llama3.3:70b', 'Qwen3:32b'])",
+            items: {
+              type: "string",
+            },
+          },
+          promptStrategy: {
+            type: "string",
+            description: "Optional prompt strategy to filter (e.g., 'zero_shot', 'few_shot', 'chain_of_thought')",
+          },
+          complexity: {
+            type: "string",
+            description: "Optional complexity level to filter (e.g., 'Easy', 'Moderate', 'Hard')",
+          },
+          testType: {
+            type: "string",
+            description: "Optional test type to filter (e.g., 'standard', 'boundary', 'mix')",
           },
         },
       },
@@ -248,8 +366,12 @@ export async function POST(request: Request) {
     const validation = chatRequestSchema.safeParse(body);
 
     if (!validation.success) {
+      console.error("❌ Request validation failed:", validation.error.format());
       return NextResponse.json(
-        { error: "Invalid request format" },
+        {
+          error: "Invalid request format",
+          details: process.env.NODE_ENV === 'development' ? validation.error.format() : undefined
+        },
         { status: 400 }
       );
     }
@@ -282,14 +404,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Build conversation history
-    const systemPrompt = getSystemPrompt(context);
+    // Build conversation history for Stage 1 (function calling)
+    // Note: Context is NOT passed to prompts - chatbot always analyzes complete dataset
+    const functionCallingPrompt = getFunctionCallingPrompt();
 
     // Convert messages to Groq format (last 5 messages)
     const groqMessages = [
       {
         role: "system" as const,
-        content: systemPrompt,
+        content: functionCallingPrompt,
       },
       ...messages.slice(-5).map((msg) => ({
         role: msg.role as "user" | "assistant",
@@ -322,19 +445,110 @@ export async function POST(request: Request) {
       });
     }
 
+    // Allowlist of safe queries (prevents raw data dumping)
+    const SAFE_QUERIES = new Set([
+      'get_metrics_by_llm',
+      'get_outcome_metrics',
+      'compare_prompts',
+      'compare_test_type',
+      'compare_complexity',
+      'get_summary_stats',
+      'get_specific_metrics',
+      'get_comprehensive_comparison',
+    ]);
+
+    // Maximum result size (prevent memory/token issues)
+    const MAX_RESULT_SIZE = 100; // Max 100 rows per query result
+
+    // Helper to truncate oversized results
+    function truncateQueryResult(result: unknown, queryName: string): unknown {
+      if (!Array.isArray(result)) {
+        return result; // Not an array, can't truncate
+      }
+
+      if (result.length > MAX_RESULT_SIZE) {
+        console.warn(`⚠️ Query ${queryName} returned ${result.length} rows, truncating to ${MAX_RESULT_SIZE}`);
+        return result.slice(0, MAX_RESULT_SIZE);
+      }
+
+      return result;
+    }
+
+    /**
+     * Validates and auto-corrects function parameters from Stage 1 LLM
+     * Handles common mistakes like passing "all" as string or wrong types
+     */
+    function validateAndCorrectParams(
+      functionName: string,
+      params: Record<string, unknown>
+    ): Record<string, unknown> {
+      const corrected = { ...params };
+
+      // Auto-correct "all" string values → omit parameter
+      if (corrected.llms === "all" || corrected.llms === "All") {
+        delete corrected.llms;
+      }
+      if (corrected.promptStrategy === "all" || corrected.promptStrategy === "All") {
+        delete corrected.promptStrategy;
+      }
+      if (corrected.complexity === "all" || corrected.complexity === "All") {
+        delete corrected.complexity;
+      }
+      if (corrected.testType === "all" || corrected.testType === "All") {
+        delete corrected.testType;
+      }
+
+      // Ensure llms is array if provided (handle single string)
+      if (corrected.llms && !Array.isArray(corrected.llms)) {
+        corrected.llms = [corrected.llms];
+      }
+
+      // Log corrections for monitoring
+      if (JSON.stringify(params) !== JSON.stringify(corrected)) {
+        console.warn('⚠️ Auto-corrected function params:', {
+          function: functionName,
+          original: params,
+          corrected
+        });
+      }
+
+      return corrected;
+    }
+
     // Execute all function calls with validation
     const functionMessages = responseMessage.tool_calls.map(
       (toolCall: ChatCompletionMessageToolCall) => {
         const functionName = toolCall.function.name;
+
+        // Security check: reject unknown/unsafe queries
+        if (!SAFE_QUERIES.has(functionName)) {
+          console.warn(`⚠️ SECURITY: Blocked unsafe query: ${functionName}`);
+          console.warn(`⚠️ SECURITY: Tool call ID: ${toolCall.id}`);
+          return {
+            role: "tool" as const,
+            tool_call_id: toolCall.id,
+            content: JSON.stringify({ error: "Query not allowed" }),
+          };
+        }
+
         const functionArgs = JSON.parse(toolCall.function.arguments);
 
-        // Execute the query
-        const queryResult = executeQuery(
+        // Validate and auto-correct parameters
+        const correctedArgs = validateAndCorrectParams(functionName, functionArgs);
+
+        // Execute the query with corrected parameters
+        let queryResult = executeQuery(
           functionName,
-          functionArgs,
+          correctedArgs,
           testSetData,
           testCaseData
         );
+
+        // Truncate oversized results for safety
+        queryResult = truncateQueryResult(queryResult, functionName);
+
+        // Log query execution for monitoring
+        console.log(`✓ Query executed: ${functionName}, result rows: ${Array.isArray(queryResult) ? queryResult.length : 'N/A'}`);
 
         // Validate query result with Zod
         try {
@@ -354,6 +568,9 @@ export async function POST(request: Request) {
               break;
             case 'get_outcome_metrics':
               validated = outcomeMetricsSchema.parse(queryResult);
+              break;
+            case 'get_comprehensive_comparison':
+              validated = comprehensiveComparisonSchema.parse(queryResult);
               break;
           }
 
@@ -381,11 +598,40 @@ export async function POST(request: Request) {
       JSON.stringify(functionMessages, null, 2)
     );
 
+    // Detect response mode based on data structure (comparison vs lookup)
+    const isComparison = functionMessages.some(msg => {
+      try {
+        const result = JSON.parse(msg.content);
+        // Array with 2+ items = comparing multiple things
+        return Array.isArray(result) && result.length > 1;
+      } catch {
+        return false;
+      }
+    });
+
+    const responseMode = isComparison ? "COMPARISON" : "LOOKUP";
+    console.log(`Response mode detected: ${responseMode}`);
+
+    // Generate explicit guidance for Stage 2 based on detected mode
+    const modeGuidance = isComparison
+      ? "COMPARISON MODE: The data contains multiple items to compare. Provide 4-8 sentences with analysis explaining WHY patterns exist, WHAT they mean, who leads, and notable insights (especially O4 context)."
+      : "LOOKUP MODE: The data is a single result. Provide 1-2 sentences with exact numbers only. No analysis needed.";
+
     // Second call: Send function results back to model
     // Use 70B model for accurate number interpretation and insightful analysis
+    // Build new messages array with Stage 2 (analysis) prompt
+    // Note: Context is NOT passed to prompts - chatbot always analyzes complete dataset
+    // Stage 2 is stateless - only receives current question + tool JSON (no conversation history)
+    const analysisPrompt = getAnalysisPrompt();
     const secondCompletion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
-      messages: [...groqMessages, responseMessage, ...functionMessages],
+      messages: [
+        { role: "system" as const, content: analysisPrompt },
+        { role: "system" as const, content: modeGuidance }, // Explicit mode instruction
+        { role: "user" as const, content: lastMessage.content }, // Only current question
+        responseMessage,
+        ...functionMessages
+      ],
       temperature: 0.3,  // Lower temperature = more deterministic, accurate with numbers
       max_tokens: 768,
     });

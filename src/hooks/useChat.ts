@@ -9,10 +9,17 @@ export interface Message {
   isStreaming?: boolean;
 }
 
+export interface Position {
+  x: number;
+  y: number;
+}
+
 interface ChatState {
   messages: Message[];
   isOpen: boolean;
   isLoading: boolean;
+  position: Position | null;
+  hasSeenWarning: boolean;
 }
 
 interface ChatStore extends ChatState {
@@ -23,12 +30,17 @@ interface ChatStore extends ChatState {
   closeChat: () => void;
   clearHistory: () => void;
   setLoading: (isLoading: boolean) => void;
+  setPosition: (position: Position) => void;
+  resetPosition: () => void;
+  dismissWarning: () => void;
 }
 
 const initialState: ChatState = {
   messages: [],
   isOpen: false,
   isLoading: false,
+  position: null,
+  hasSeenWarning: false,
 };
 
 export const useChat = create<ChatStore>()(
@@ -67,11 +79,21 @@ export const useChat = create<ChatStore>()(
       clearHistory: () => set({ messages: [] }),
 
       setLoading: (isLoading) => set({ isLoading }),
+
+      setPosition: (position) => set({ position }),
+
+      resetPosition: () => set({ position: null }),
+
+      dismissWarning: () => set({ hasSeenWarning: true }),
     }),
     {
       name: 'testforge-chat-history',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ messages: state.messages }), // Only persist messages
+      partialize: (state) => ({
+        messages: state.messages,
+        position: state.position,
+        // hasSeenWarning NOT persisted - warning shows on every page reload
+      }), // Persist messages and position only (NOT isOpen or hasSeenWarning)
     }
   )
 );
